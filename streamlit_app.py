@@ -44,7 +44,7 @@ if st.button("নোটস তৈরি করুন"):
             
             try:
                 # Gemini 1.5 Flash মডেল ব্যবহার করা হচ্ছে যা খুব ফাস্ট
-                model = genai.GenerativeModel("gemini_pro")
+                model = genai.GenerativeModel("gemini-pro")
                 response = model.generate_content(prompt)
                 
                 st.success("নোটস তৈরি সম্পন্ন!")
