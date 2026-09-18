@@ -1,10 +1,13 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI
 import PyPDF2
 
-# Gemini API Key সেটআপ (এটি আমরা হোস্টিংয়ের সময় সিক্রেট হিসেবে যুক্ত করব)
-# আপনার যদি লোকাল পিসিতে টেস্ট করতে হয়, তবে st.secrets এর জায়গায় সরাসরি আপনার API key দিতে পারেন।
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# OpenRouter API Setup
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=st.secrets["OPENROUTER_API_KEY"],
+)
+
 def extract_text_from_pdf(pdf_file):
     reader = PyPDF2.PdfReader(pdf_file)
     text = ""
@@ -32,7 +35,6 @@ if st.button("নোটস তৈরি করুন"):
         
     if syllabus_content:
         with st.spinner("আপনার জন্য এআই নোটস তৈরি করছে..."):
-            # এআই-কে দেওয়া নির্দেশ (Prompt)
             prompt = f"""
             নিচের সিলেবাস বা টপিকগুলোর ওপর একটি বিস্তারিত ও গোছানো নোটস তৈরি করো। 
             নোটসগুলো এমনভাবে লিখবে যেন মনে হয় একজন শিক্ষক ক্লাসরুমে বেঞ্চে বসে থাকা স্টুডেন্টদের সামনে দাঁড়িয়ে খুব সহজ ও সুন্দর ভাষায় সবকিছু বুঝিয়ে বলছেন। 
@@ -43,13 +45,17 @@ if st.button("নোটস তৈরি করুন"):
             """
             
             try:
-                # Gemini 1.5 Flash মডেল ব্যবহার করা হচ্ছে যা খুব ফাস্ট
-                model = genai.GenerativeModel("gemini-pro")
-                response = model.generate_content(prompt)
+                # OpenRouter এর ফ্রি Llama 3 মডেল
+                response = client.chat.completions.create(
+                    model="meta-llama/llama-3.8b-instruct:free",
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ]
+                )
                 
                 st.success("নোটস তৈরি সম্পন্ন!")
                 st.subheader("আপনার জেনারেটেড নোটস:")
-                st.write(response.text)
+                st.write(response.choices[0].message.content)
             except Exception as e:
                 st.error(f"কোনো একটি সমস্যা হয়েছে: {e}")
     else:
