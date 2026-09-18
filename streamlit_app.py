@@ -4,8 +4,7 @@ import PyPDF2
 
 # Gemini API Key সেটআপ (এটি আমরা হোস্টিংয়ের সময় সিক্রেট হিসেবে যুক্ত করব)
 # আপনার যদি লোকাল পিসিতে টেস্ট করতে হয়, তবে st.secrets এর জায়গায় সরাসরি আপনার API key দিতে পারেন।
-genai.configure(api_key=st.secrets["AQ.Ab8RN6KLh-NAE7oFB7fNX55Xa7Yb1zdM-sDYOnMfZT9-ENLfHw"])
-
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 def extract_text_from_pdf(pdf_file):
     reader = PyPDF2.PdfReader(pdf_file)
     text = ""
