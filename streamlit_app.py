@@ -47,7 +47,7 @@ if st.button("নোটস তৈরি করুন"):
             try:
                 # OpenRouter এর ফ্রি Llama 3 মডেল
                 response = client.chat.completions.create(
-                    model="meta-llama/llama-3.8b-instruct:free",
+                    model="meta-llama/llama-3-8b-instruct:free"
                     messages=[
                         {"role": "user", "content": prompt}
                     ]
