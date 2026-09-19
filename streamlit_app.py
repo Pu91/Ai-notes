@@ -2,10 +2,10 @@ import streamlit as st
 from openai import OpenAI
 import PyPDF2
 
-# OpenRouter API Setup
+# DeepSeek API Setup
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=st.secrets["OPENROUTER_API_KEY"],
+    base_url="https://api.deepseek.com",
+    api_key=st.secrets["DEEPSEEK_API_KEY"],
 )
 
 def extract_text_from_pdf(pdf_file):
@@ -15,12 +15,10 @@ def extract_text_from_pdf(pdf_file):
         text += page.extract_text()
     return text
 
-# ওয়েবসাইটের ডিজাইন
 st.set_page_config(page_title="AI Notes Generator", page_icon="📚")
 st.title("📚 AI Notes Generator")
 st.write("আপনার সিলেবাসের PDF আপলোড করুন এবং মুহূর্তেই বিস্তারিত নোটস পেয়ে যান!")
 
-# ইনপুট নেওয়ার অপশন
 uploaded_file = st.file_uploader("সিলেবাসের PDF আপলোড করুন", type=["pdf"])
 topic_text = st.text_area("অথবা, সিলেবাসের টপিকগুলো এখানে টাইপ করুন:")
 
@@ -45,9 +43,9 @@ if st.button("নোটস তৈরি করুন"):
             """
             
             try:
-                # OpenRouter এর ফ্রি Llama 3 মডেল
+                # DeepSeek-এর লেটেস্ট চ্যাট মডেল
                 response = client.chat.completions.create(
-                    model="google/gemma-7b-it:free",
+                    model="deepseek-chat",
                     messages=[
                         {"role": "user", "content": prompt}
                     ]
