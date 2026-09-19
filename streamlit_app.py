@@ -15,10 +15,9 @@ st.set_page_config(page_title="AI Notes Assistant", page_icon="🤖", layout="ce
 # ==========================================
 custom_css = """
 <style>
-    /* ডিফল্ট হেডার ও ফুটার লুকানো */
+    /* শুধু অপ্রয়োজনীয় মেনু লুকানো হয়েছে, হেডার রাখা হয়েছে যাতে ৩-লাইনের মেনু দেখা যায় */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     
     /* মোবাইলে ডানে-বামে স্লাইড হওয়া বন্ধ করা এবং মার্জিন ঠিক করা */
     * {
@@ -32,18 +31,10 @@ custom_css = """
         white-space: pre-wrap !important;
         overflow-x: hidden !important;
     }
-    /* চ্যাট মেসেজের চারপাশের মার্জিন ও প্যাডিং */
     .stChatMessage {
         padding: 15px !important;
         border-radius: 10px !important;
         margin-bottom: 10px !important;
-    }
-    /* স্ক্রিনের সাইডের মার্জিন */
-    .block-container {
-        padding-top: 1rem;
-        padding-bottom: 6rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
     }
 </style>
 """
@@ -60,26 +51,32 @@ def extract_text_from_pdf(pdf_file):
     return text
 
 # ==========================================
-# টপ হেডার (টাইটেল এবং New Chat)
-# ==========================================
-col1, col2 = st.columns([7, 3])
-with col1:
-    st.markdown("### 🤖 AI Notes")
-with col2:
-    if st.button("📝 New Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
-
-# ==========================================
-# সাইডবার (শুধুমাত্র হিস্ট্রি এবং আপগ্রেড)
+# সাইডবার (New Chat, History, Upgrade)
 # ==========================================
 with st.sidebar:
+    if st.button("➕ New Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+        
+    st.write("---")
     st.subheader("🕒 Chat History")
     st.button("📝 Unit 6 & 7 Notes", use_container_width=True)
     st.button("📝 Bengali Syllabus", use_container_width=True)
     st.button("📝 English Grammar", use_container_width=True)
     st.write("---")
     st.markdown("### 🚀 [Upgrade to Plus](#)")
+
+# ==========================================
+# টপ হেডার (AI Notes এবং ছোট New Chat আইকন)
+# ==========================================
+col1, col2 = st.columns([8, 2])
+with col1:
+    st.title("🤖 AI Notes")
+with col2:
+    st.write("") # আইকনটিকে টাইটেলের সমান লেভেলে আনার জন্য
+    if st.button("➕", help="New Chat"):
+        st.session_state.messages = []
+        st.rerun()
 
 # ==========================================
 # মূল চ্যাট ইন্টারফেস
@@ -90,10 +87,10 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # ==========================================
-# ইনপুট এবং অ্যাটাচমেন্ট (চ্যাট বক্সের উপরে)
+# ইনপুট এবং PDF আপলোড (+ আইকন)
 # ==========================================
-# ফাইল আপলোডের জন্য পপওভার (ক্লিক করলে বক্স খুলবে)
-with st.popover("📎 PDF আপলোড"):
+# চ্যাট বক্সের ঠিক উপরে + আইকনের পপওভার
+with st.popover("➕ PDF আপলোড"):
     uploaded_file = st.file_uploader("সিলেবাস নির্বাচন করুন", type=["pdf"])
     if uploaded_file:
         st.success("ফাইল যুক্ত হয়েছে! এবার নিচে প্রশ্ন লিখুন।")
