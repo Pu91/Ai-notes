@@ -1,5 +1,5 @@
 Flask
-Flask-SQLAlchemy
-PyPDF2
 google-generativeai
 gunicorn
+firebase-admin
+PyPDF2
