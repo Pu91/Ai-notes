@@ -2,10 +2,10 @@ import streamlit as st
 from openai import OpenAI
 import PyPDF2
 
-# DeepSeek API Setup
+# Groq API Setup (OpenAI লাইব্রেরি ব্যবহার করে)
 client = OpenAI(
-    base_url="https://api.deepseek.com",
-    api_key=st.secrets["DEEPSEEK_API_KEY"],
+    base_url="https://api.groq.com/openai/v1",
+    api_key=st.secrets["GROQ_API_KEY"],
 )
 
 def extract_text_from_pdf(pdf_file):
@@ -43,9 +43,9 @@ if st.button("নোটস তৈরি করুন"):
             """
             
             try:
-                # DeepSeek-এর লেটেস্ট চ্যাট মডেল
+                # Groq-এর সুপারফাস্ট Llama 3 মডেল
                 response = client.chat.completions.create(
-                    model="deepseek-chat",
+                    model="llama3-8b-8192",
                     messages=[
                         {"role": "user", "content": prompt}
                     ]
