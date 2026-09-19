@@ -11,30 +11,33 @@ client = OpenAI(
 st.set_page_config(page_title="AI Notes Assistant", page_icon="🤖", layout="centered")
 
 # ==========================================
-# মোবাইল ফ্রেন্ডলি ডিজাইন এবং CSS
+# কাস্টম CSS (হেডারের বাড়তি আইকন লুকানো এবং ডিজাইন)
 # ==========================================
 custom_css = """
 <style>
-    /* শুধু অপ্রয়োজনীয় মেনু লুকানো হয়েছে, হেডার রাখা হয়েছে যাতে ৩-লাইনের মেনু দেখা যায় */
-    #MainMenu {visibility: hidden;}
+    /* Share, Deploy এবং GitHub আইকন লুকানো, কিন্তু ☰ মেনু থাকবে */
+    [data-testid="stHeaderActionElements"] {display: none !important;}
     footer {visibility: hidden;}
     
-    /* মোবাইলে ডানে-বামে স্লাইড হওয়া বন্ধ করা এবং মার্জিন ঠিক করা */
+    /* মোবাইলে ডানে-বামে স্লাইড হওয়া বন্ধ করা */
     * {
         overflow-wrap: break-word !important;
         word-wrap: break-word !important;
     }
-    .stMarkdown p, .stMarkdown li {
-        white-space: normal !important;
-    }
-    .stMarkdown pre {
-        white-space: pre-wrap !important;
-        overflow-x: hidden !important;
-    }
+    
+    /* চ্যাট মেসেজের চারপাশের মার্জিন ও প্যাডিং */
     .stChatMessage {
         padding: 15px !important;
         border-radius: 10px !important;
         margin-bottom: 10px !important;
+    }
+    
+    /* স্ক্রিনের সাইডের মার্জিন */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 6rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 </style>
 """
@@ -71,9 +74,9 @@ with st.sidebar:
 # ==========================================
 col1, col2 = st.columns([8, 2])
 with col1:
-    st.title("🤖 AI Notes")
+    st.markdown("### 🤖 AI Notes")
 with col2:
-    st.write("") # আইকনটিকে টাইটেলের সমান লেভেলে আনার জন্য
+    st.write("") # এলাইনমেন্ট ঠিক করার জন্য
     if st.button("➕", help="New Chat"):
         st.session_state.messages = []
         st.rerun()
@@ -87,11 +90,11 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # ==========================================
-# ইনপুট এবং PDF আপলোড (+ আইকন)
+# ইনপুট এবং PDF আপলোড (ছোট 📎 আইকন)
 # ==========================================
-# চ্যাট বক্সের ঠিক উপরে + আইকনের পপওভার
-with st.popover("➕ PDF আপলোড"):
-    uploaded_file = st.file_uploader("সিলেবাস নির্বাচন করুন", type=["pdf"])
+# চ্যাট বক্সের ঠিক উপরে ছোট্ট পপওভার বাটন
+with st.popover("📎"):
+    uploaded_file = st.file_uploader("PDF সিলেবাস আপলোড করুন", type=["pdf"])
     if uploaded_file:
         st.success("ফাইল যুক্ত হয়েছে! এবার নিচে প্রশ্ন লিখুন।")
 
