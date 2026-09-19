@@ -139,7 +139,4 @@ if prompt := st.chat_input("আপনার সিলেবাসের টপ�
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"কোনো একটি সমস্যা হয়েছে: {e}")            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
-        except Exception as e:
             st.error(f"কোনো একটি সমস্যা হয়েছে: {e}")
