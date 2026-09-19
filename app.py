@@ -53,7 +53,7 @@ def chat():
     
     try:
         # এখানে গুগলের সবচেয়ে শক্তিশালী Gemini 1.5 Pro মডেল ব্যবহার করা হয়েছে
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(full_prompt)
         ai_response = response.text
         
