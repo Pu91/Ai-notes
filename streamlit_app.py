@@ -93,7 +93,7 @@ if prompt = st.chat_input("আপনার সিলেবাসের টপি
         try:
             with st.spinner("নোটস তৈরি হচ্ছে..."):
                 response = client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
+                    if prompt := st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
                     messages=[
                         {"role": "user", "content": full_prompt}
                     ]
