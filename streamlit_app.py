@@ -33,13 +33,13 @@ with st.sidebar:
         
     st.write("---")
     
-    # PDF আপলোড অপশন সাইডবারে রাখা হলো যাতে মূল চ্যাট স্ক্রিন পরিষ্কার থাকে
+    # PDF আপলোড অপশন 
     st.subheader("📚 সিলেবাস আপলোড")
     uploaded_file = st.file_uploader("PDF ফাইল দিন (ঐচ্ছিক)", type=["pdf"])
     
     st.write("---")
     
-    # চ্যাট হিস্ট্রি (আপাতত ডেমো লিস্ট, পরবর্তীতে ডাটাবেস যুক্ত করলে এগুলো কাজ করবে)
+    # চ্যাট হিস্ট্রি (ডেমো লিস্ট)
     st.subheader("🕒 Chat History")
     st.button("📝 Unit 6 & 7 Notes", use_container_width=True)
     st.button("📝 Bengali Syllabus", use_container_width=True)
@@ -61,8 +61,8 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# ইউজারের ইনপুট নেওয়ার জন্য চ্যাট বক
-    if prompt := st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
+# ইউজারের ইনপুট নেওয়ার জন্য চ্যাট বক্স
+if prompt := st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
     
     # ইউজারের মেসেজ স্ক্রিনে দেখানো এবং সেভ করা
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -77,9 +77,10 @@ for message in st.session_state.messages:
         context = ""
         if uploaded_file is not None:
             pdf_text = extract_text_from_pdf(uploaded_file)
-            # টোকেন লিমিট এড়াতে সাইজ কন্ট্রোল
+            # টোকেন লিমিট এড়াতে সাইজ কন্ট্রোল (সর্বোচ্চ ১৫০০০ অক্ষর)
             if len(pdf_text) > 15000:
                 pdf_text = pdf_text[:15000]
+                st.warning("⚠️ PDF-টি অনেক বড় হওয়ায় প্রথম অংশের ওপর ভিত্তি করে উত্তর দেওয়া হচ্ছে।")
             context = f"\n\n[নিচের PDF তথ্যের ওপর ভিত্তি করে উত্তর দাও:\n{pdf_text}]"
             
         # এআই-কে নির্দেশ দেওয়া (Teacher Persona)
