@@ -68,29 +68,48 @@
             <div style="display: flex; align-items: center;">
                 <button class="menu-btn" onclick="toggleSidebar()">☰</button>
                 <span style="display: flex; align-items: center; gap: 8px;">
-                    <img src="bot.png" style="width: 24px; height: 24px; border-radius: 5px;" alt="AI"> AI Notes
+                    <img src="/static/bot.png" style="width: 24px; height: 24px; border-radius: 5px;" alt="AI"> AI Notes
                 </span>
             </div>
             <button class="new-chat-btn" onclick="location.reload()">➕</button>
         </div>
 
         <div id="chat-box">
-            <!-- Messages will appear here -->
+            <!-- Firebase থেকে পুরনো চ্যাট হিস্ট্রি রেন্ডার করা হচ্ছে -->
+            {% if history %}
+                {% for chat in history %}
+                    <div class="message-row user-row">
+                        <div class="avatar">
+                            <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true" alt="User">
+                        </div>
+                        <div class="message user-msg">{{ chat.user_msg }}</div>
+                    </div>
+                    <div class="message-row bot-row">
+                        <div class="avatar">
+                            <img src="/static/bot.png" style="border-radius: 5px;" alt="AI">
+                        </div>
+                        <div class="message bot-msg">{{ chat.ai_msg | replace('\n', '<br>') | safe }}</div>
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
 
         <div id="input-container">
             <div id="file-name-label"></div>
             <div id="form-wrapper">
                 <input type="file" id="pdf_file" accept=".pdf" style="display: none;" onchange="showFileName()">
-                <button class="attach-btn" onclick="document.getElementById('pdf_file').click()">📎</button>
+                <button class="attach-btn" type="button" onclick="document.getElementById('pdf_file').click()">📎</button>
                 <textarea id="prompt" placeholder="Message AI Notes..."></textarea>
-                <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
+                <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()">↑</button>
                 <div class="loader" id="loader"></div>
             </div>
         </div>
     </div>
 
     <script>
+        const chatBox = document.getElementById('chat-box');
+        chatBox.scrollTop = chatBox.scrollHeight;
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('open');
@@ -106,19 +125,18 @@
         }
 
         function appendMessage(sender, text, isError = false) {
-            const chatBox = document.getElementById('chat-box');
             const rowDiv = document.createElement('div');
             rowDiv.className = sender === 'user' ? 'message-row user-row' : 'message-row bot-row';
 
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'avatar';
             
-            // Image URLs for Bot and User
             const botImgUrl = '/static/bot.png'; 
-            const userImgUrl = 'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true'; // Default User Profile Photo
+            const userImgUrl = 'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true';
 
             const img = document.createElement('img');
             img.src = sender === 'user' ? userImgUrl : botImgUrl;
+            if(sender === 'bot') img.style.borderRadius = '5px';
             avatarDiv.appendChild(img);
 
             const msgDiv = document.createElement('div');
