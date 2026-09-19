@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from openai import OpenAI
+import google.generativeai as genai
 import PyPDF2
 import os
 
@@ -19,12 +19,9 @@ class Chat(db.Model):
 with app.app_context():
     db.create_all()
 
-# API Key সেটআপ
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=GROQ_API_KEY
-)
+# Gemini API Key সেটআপ
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+genai.configure(api_key=GEMINI_API_KEY)
 
 @app.route('/')
 def home():
@@ -55,14 +52,12 @@ def chat():
     """
     
     try:
-        # এখানে মডেল পরিবর্তন করে Groq-এর সবচেয়ে শক্তিশালী Llama 3 (70B) মডেল দেওয়া হয়েছে
-        response = client.chat.completions.create(
-            model="llama3-70b-8192",
-            messages=[{"role": "user", "content": full_prompt}],
-            temperature=0.5
-        )
-        ai_response = response.choices[0].message.content
+        # এখানে গুগলের সবচেয়ে শক্তিশালী Gemini 1.5 Pro মডেল ব্যবহার করা হয়েছে
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content(full_prompt)
+        ai_response = response.text
         
+        # ডেটাবেসে সেভ করা
         new_chat = Chat(user_msg=prompt, ai_msg=ai_response)
         db.session.add(new_chat)
         db.session.commit()
