@@ -45,7 +45,7 @@ if st.button("নোটস তৈরি করুন"):
             try:
                 # Groq-এর সুপারফাস্ট Llama 3 মডেল
                 response = client.chat.completions.create(
-                    model="mixtral-8x7b-32768",
+                    model="openai/gpt-oss-20b",
                     messages=[
                         {"role": "user", "content": prompt}
                     ]
