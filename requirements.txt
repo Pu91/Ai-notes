@@ -1,5 +1,5 @@
 Flask
-openai
-PyPDF2
-gunicorn
 Flask-SQLAlchemy
+PyPDF2
+google-generativeai
+gunicorn
