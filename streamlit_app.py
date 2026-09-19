@@ -61,8 +61,8 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# ইউজারের ইনপুট নেওয়ার জন্য চ্যাট বক্স
-if prompt = st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
+# ইউজারের ইনপুট নেওয়ার জন্য চ্যাট বক
+    if prompt := st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
     
     # ইউজারের মেসেজ স্ক্রিনে দেখানো এবং সেভ করা
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -93,7 +93,7 @@ if prompt = st.chat_input("আপনার সিলেবাসের টপি
         try:
             with st.spinner("নোটস তৈরি হচ্ছে..."):
                 response = client.chat.completions.create(
-                    if prompt := st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
+                    model="openai/gpt-oss-20b",
                     messages=[
                         {"role": "user", "content": full_prompt}
                     ]
