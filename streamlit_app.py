@@ -5,7 +5,7 @@ import os
 
 app = Flask(__name__)
 
-# API Key সেটআপ (লোকাল টেস্ট বা হোস্টিংয়ের সময় Environment Variable থেকে নেবে)
+# API Key সেটআপ
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
@@ -14,6 +14,7 @@ client = OpenAI(
 
 @app.route('/')
 def home():
+    # এটি আপনার templates ফোল্ডার থেকে index.html ডিজাইন পেজটিকে কল করবে
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
