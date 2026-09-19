@@ -2,3 +2,4 @@ Flask
 openai
 PyPDF2
 gunicorn
+Flask-SQLAlchemy
