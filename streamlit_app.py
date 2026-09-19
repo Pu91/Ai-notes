@@ -1,142 +1,49 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
 import PyPDF2
+import os
 
-# Groq API Setup
+app = Flask(__name__)
+
+# API Key সেটআপ (লোকাল টেস্ট বা হোস্টিংয়ের সময় Environment Variable থেকে নেবে)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
-    api_key=st.secrets["GROQ_API_KEY"],
+    api_key=GROQ_API_KEY
 )
 
-st.set_page_config(page_title="AI Notes Assistant", page_icon="🤖", layout="centered")
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-# ==========================================
-# কাস্টম CSS (হেডারের বাড়তি আইকন লুকানো এবং ডিজাইন)
-# ==========================================
-custom_css = """
-<style>
-    /* Share, Deploy এবং GitHub আইকন লুকানো, কিন্তু ☰ মেনু থাকবে */
-    [data-testid="stHeaderActionElements"] {display: none !important;}
-    footer {visibility: hidden;}
+@app.route('/chat', methods=['POST'])
+def chat():
+    prompt = request.form.get('prompt')
+    pdf_file = request.files.get('pdf_file')
     
-    /* মোবাইলে ডানে-বামে স্লাইড হওয়া বন্ধ করা */
-    * {
-        overflow-wrap: break-word !important;
-        word-wrap: break-word !important;
-    }
+    context = ""
+    if pdf_file and pdf_file.filename.endswith('.pdf'):
+        reader = PyPDF2.PdfReader(pdf_file)
+        pdf_text = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
+        if len(pdf_text) > 15000:
+            pdf_text = pdf_text[:15000]
+        context = f"\n\n[নিচের PDF তথ্যের ওপর ভিত্তি করে উত্তর দাও:\n{pdf_text}]"
+        
+    full_prompt = f"""
+    তুমি একজন শিক্ষক। তুমি ক্লাসরুমে বেঞ্চে বসে থাকা স্টুডেন্টদের সামনে দাঁড়িয়ে খুব সহজ, সুন্দর ও সাবলীল ভাষায় পড়া বোঝাচ্ছো। 
+    পয়েন্ট করে এবং বাস্তব উদাহরণ দিয়ে বিষয়টি বুঝিয়ে দেবে।
     
-    /* চ্যাট মেসেজের চারপাশের মার্জিন ও প্যাডিং */
-    .stChatMessage {
-        padding: 15px !important;
-        border-radius: 10px !important;
-        margin-bottom: 10px !important;
-    }
+    ইউজারের প্রশ্ন বা টপিক: {prompt} {context}
+    """
     
-    /* স্ক্রিনের সাইডের মার্জিন */
-    .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 6rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-</style>
-"""
-st.markdown(custom_css, unsafe_allow_html=True)
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[{"role": "user", "content": full_prompt}]
+        )
+        return jsonify({"response": response.choices[0].message.content})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-def extract_text_from_pdf(pdf_file):
-    reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text()
-    return text
-
-# ==========================================
-# সাইডবার (New Chat, History, Upgrade)
-# ==========================================
-with st.sidebar:
-    if st.button("➕ New Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
-        
-    st.write("---")
-    st.subheader("🕒 Chat History")
-    st.button("📝 Unit 6 & 7 Notes", use_container_width=True)
-    st.button("📝 Bengali Syllabus", use_container_width=True)
-    st.button("📝 English Grammar", use_container_width=True)
-    st.write("---")
-    st.markdown("### 🚀 [Upgrade to Plus](#)")
-
-# ==========================================
-# টপ হেডার (AI Notes এবং ছোট New Chat আইকন)
-# ==========================================
-col1, col2 = st.columns([8, 2])
-with col1:
-    st.markdown("### 🤖 AI Notes")
-with col2:
-    st.write("") # এলাইনমেন্ট ঠিক করার জন্য
-    if st.button("➕", help="New Chat"):
-        st.session_state.messages = []
-        st.rerun()
-
-# ==========================================
-# মূল চ্যাট ইন্টারফেস
-# ==========================================
-# আগের চ্যাট মেসেজগুলো দেখানো
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# ==========================================
-# ইনপুট এবং PDF আপলোড (ছোট 📎 আইকন)
-# ==========================================
-# চ্যাট বক্সের ঠিক উপরে ছোট্ট পপওভার বাটন
-with st.popover("📎"):
-    uploaded_file = st.file_uploader("PDF সিলেবাস আপলোড করুন", type=["pdf"])
-    if uploaded_file:
-        st.success("ফাইল যুক্ত হয়েছে! এবার নিচে প্রশ্ন লিখুন।")
-
-# ইউজারের ইনপুট বক্স
-if prompt := st.chat_input("আপনার সিলেবাসের টপিক বা প্রশ্ন লিখুন..."):
-    
-    # ইউজারের মেসেজ সেভ করা
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-        
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        
-        # PDF প্রসেসিং
-        context = ""
-        if uploaded_file is not None:
-            pdf_text = extract_text_from_pdf(uploaded_file)
-            if len(pdf_text) > 15000:
-                pdf_text = pdf_text[:15000]
-                st.warning("⚠️ PDF-টি অনেক বড় হওয়ায় প্রথম অংশের ওপর ভিত্তি করে উত্তর দেওয়া হচ্ছে।")
-            context = f"\n\n[নিচের PDF তথ্যের ওপর ভিত্তি করে উত্তর দাও:\n{pdf_text}]"
-            
-        full_prompt = f"""
-        তুমি একজন শিক্ষক। তুমি ক্লাসরুমে বেঞ্চে বসে থাকা স্টুডেন্টদের সামনে দাঁড়িয়ে খুব সহজ, সুন্দর ও সাবলীল ভাষায় পড়া বোঝাচ্ছো। 
-        পয়েন্ট করে এবং বাস্তব উদাহরণ দিয়ে বিষয়টি বুঝিয়ে দেবে।
-        
-        ইউজারের প্রশ্ন বা টপিক: {prompt} {context}
-        """
-        
-        try:
-            with st.spinner("নোটস তৈরি হচ্ছে..."):
-                response = client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
-                    messages=[
-                        {"role": "user", "content": full_prompt}
-                    ]
-                )
-                full_response = response.choices[0].message.content
-                
-            message_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
-        except Exception as e:
-            st.error(f"কোনো একটি সমস্যা হয়েছে: {e}")
+if __name__ == '__main__':
+    app.run(debug=True)
