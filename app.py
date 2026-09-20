@@ -13,6 +13,7 @@ from firebase_admin import credentials, firestore, auth as firebase_auth
 
 app = Flask(__name__)
 app.secret_key = "super_secret_ai_notes_key_123" 
+# একবার লগইন করলে ৩০ দিন লগইন থাকবে
 app.permanent_session_lifetime = timedelta(days=30) 
 
 # Firebase Setup
@@ -153,7 +154,7 @@ def home():
         msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
         for m in msgs: 
             data = m.to_dict()
-            data['id'] = m.id # Message ID যোগ করা হলো এডিট করার জন্য
+            data['id'] = m.id 
             history.append(data)
             
     return render_template('index.html', history=history, sidebar_sessions=sidebar_sessions, current_session=session_id, user_email=user_email)
@@ -169,8 +170,23 @@ def chat():
     if not session_id or session_id == "None": session_id = str(uuid.uuid4())
     
     img_url = None
-    gemini_input = [f"তুমি একজন স্মার্ট টিউটর। পয়েন্ট করে গুছিয়ে উত্তর দেবে।\nইউজারের প্রশ্ন: {prompt}"]
     
+    # --- ইমেজ জেনারেশন সাপোর্ট সহ এআই প্রম্পট ---
+    system_instruction = f"""
+    তুমি একজন স্মার্ট এআই। 
+    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
+    তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
+    <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
+    
+    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
+    
+    ইউজারের প্রশ্ন: {prompt}
+    """
+    
+    gemini_input = [system_instruction]
+    
+    # ছবি আপলোডের লজিক
     if file:
         os.makedirs('static/uploads', exist_ok=True)
         filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
@@ -200,7 +216,7 @@ def chat():
             chat_data['img_url'] = img_url
             
         update_time, doc_ref = session_ref.collection('messages').add(chat_data)
-        # Frontend-এ msg_id পাঠানো হচ্ছে যাতে এডিট করা যায়
+        
         return jsonify({"response": ai_response, "session_id": session_id, "img_url": img_url, "msg_id": doc_ref.id})
     except Exception as e:
         return jsonify({"error": str(e)})
@@ -214,7 +230,18 @@ def edit_chat():
     session_id = request.form.get('session_id')
     msg_id = request.form.get('msg_id')
     
-    gemini_input = [f"তুমি একজন স্মার্ট টিউটর। পয়েন্ট করে গুছিয়ে উত্তর দেবে।\nইউজারের প্রশ্ন: {prompt}"]
+    system_instruction = f"""
+    তুমি একজন স্মার্ট এআই। 
+    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
+    তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
+    <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
+    
+    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
+    
+    ইউজারের প্রশ্ন: {prompt}
+    """
+    gemini_input = [system_instruction]
     
     try:
         model = genai.GenerativeModel('gemini-3.8-flash')
