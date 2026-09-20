@@ -9,6 +9,7 @@
         .box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         .btn { width: 100%; padding: 12px; background: #000; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px;}
+        .google-btn { background: #fff; color: #333; border: 1px solid #ddd; display: flex; justify-content: center; align-items: center; gap: 10px; font-weight: bold; }
         a { color: #0D8ABC; text-decoration: none; font-size: 14px; }
     </style>
 </head>
@@ -26,7 +27,16 @@
             <input type="password" name="password" placeholder="Create Password" required>
             <button class="btn" type="submit">Sign Up</button>
         </form>
+        
+        <div style="margin: 20px 0; color: #888;">OR</div>
+        
+        <button type="button" class="btn google-btn" id="google-btn">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20"> Sign Up with Google
+        </button>
+
         <p style="margin-top: 25px;">Already have an account? <a href="/login">Login</a></p>
     </div>
+
+    <!-- Login.html এর মতো একই স্ক্রিপ্ট এখানেও ব্যবহার করতে পারেন (Config সহ) -->
 </body>
 </html>
