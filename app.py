@@ -88,6 +88,11 @@ def logout():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
+        
+        if not email:
+            flash("দয়া করে ইমেইল দিন!", "error")
+            return redirect(url_for('forgot_password'))
+            
         user_ref = db.collection('users').document(email).get()
         if not user_ref.exists:
             flash("এই ইমেইলটি আমাদের সিস্টেমে নেই!", "error")
@@ -97,24 +102,26 @@ def forgot_password():
         session['reset_email'] = email
         session['otp'] = otp
         
-        # --- সত্যিকারের ইমেইল পাঠানোর কোড ---
-        sender_email = "puspenduhaldar652@gmail.com"  # <--- এখানে আপনার আসল জিমেইলটি দিন
-        sender_password = "tuelxovrkmfeqolr"     # <--- আপনার দেওয়া App Password বসানো হয়েছে
-
-        msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}")
-        msg['Subject'] = 'AI Notes - Password Reset OTP'
-        msg['From'] = f"AI Notes <{sender_email}>"
-        msg['To'] = email
+        sender_email = "Puspenduhaldar652@gmail.com"  
+        sender_password = "tuelxovrkmfeqolr"          
 
         try:
+            # বাংলা লেখার এরর ফিক্স করার জন্য 'utf-8' যোগ করা হয়েছে
+            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
+            msg['Subject'] = 'AI Notes - Password Reset'
+            msg['From'] = f"AI Notes <{sender_email}>"
+            msg['To'] = email
+
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, [email], msg.as_string())
-            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স বা স্প্যাম ফোল্ডার চেক করুন।", "success")
+                
+            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
             return redirect(url_for('verify_otp'))
+            
         except Exception as e:
             print("Email Error:", e)
-            flash("ইমেইল পাঠাতে সার্ভার সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।", "error")
+            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
             return redirect(url_for('forgot_password'))
             
     return render_template('forgot.html')
