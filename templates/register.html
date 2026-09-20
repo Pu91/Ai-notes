@@ -37,6 +37,47 @@
         <p style="margin-top: 25px;">Already have an account? <a href="/login">Login</a></p>
     </div>
 
-    <!-- Login.html এর মতো একই স্ক্রিপ্ট এখানেও ব্যবহার করতে পারেন (Config সহ) -->
+    <!-- Firebase Auth Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        // আপনার দেওয়া আসল Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvOIwR5g--FPddJr4gQ-i4_EjR47iN01s",
+            authDomain: "ai-tution-a7e64.firebaseapp.com",
+            projectId: "ai-tution-a7e64",
+            storageBucket: "ai-tution-a7e64.firebasestorage.app",
+            messagingSenderId: "696067351148",
+            appId: "1:696067351148:web:3b45e0127b4baf8687ae49",
+            measurementId: "G-WXK2NF2P1X"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        document.getElementById('google-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+            .then((result) => result.user.getIdToken())
+            .then((token) => {
+                // টোকেনটি সার্ভারে পাঠানো হচ্ছে
+                fetch('/google-login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({token: token})
+                }).then(res => res.json()).then(data => {
+                    if(data.status === 'success') {
+                        window.location.href = '/';
+                    } else {
+                        alert("Google Sign Up Failed!");
+                    }
+                });
+            })
+            .catch((error) => {
+                alert("Error: " + error.message);
+            });
+        });
+    </script>
 </body>
 </html>
