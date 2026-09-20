@@ -4,6 +4,8 @@ import google.generativeai as genai
 import os
 import uuid
 import random
+import smtplib
+from email.mime.text import MIMEText
 import firebase_admin
 from firebase_admin import credentials, firestore, auth as firebase_auth
 
@@ -94,8 +96,27 @@ def forgot_password():
         otp = str(random.randint(1000, 9999))
         session['reset_email'] = email
         session['otp'] = otp
-        flash(f"আপনার OTP হলো: {otp} (টেস্টিংয়ের জন্য)", "success")
-        return redirect(url_for('verify_otp'))
+        
+        # --- সত্যিকারের ইমেইল পাঠানোর কোড ---
+        sender_email = "আপনার_জিমেইল@gmail.com"  # <--- এখানে আপনার আসল জিমেইলটি দিন
+        sender_password = "tuelxovrkmfeqolr"     # <--- আপনার দেওয়া App Password বসানো হয়েছে
+
+        msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}")
+        msg['Subject'] = 'AI Notes - Password Reset OTP'
+        msg['From'] = f"AI Notes <{sender_email}>"
+        msg['To'] = email
+
+        try:
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, [email], msg.as_string())
+            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স বা স্প্যাম ফোল্ডার চেক করুন।", "success")
+            return redirect(url_for('verify_otp'))
+        except Exception as e:
+            print("Email Error:", e)
+            flash("ইমেইল পাঠাতে সার্ভার সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।", "error")
+            return redirect(url_for('forgot_password'))
+            
     return render_template('forgot.html')
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
