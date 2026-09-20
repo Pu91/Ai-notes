@@ -38,18 +38,20 @@
         <p style="margin-top: 25px;">Don't have an account? <a href="/register">Sign Up</a></p>
     </div>
 
+    <!-- Firebase Auth Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-        // এখানে আপনার Firebase Console থেকে পাওয়া Config বসান
+        // আপনার দেওয়া আসল Firebase Config
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "...",
-            messagingSenderId: "...",
-            appId: "..."
+            apiKey: "AIzaSyCvOIwR5g--FPddJr4gQ-i4_EjR47iN01s",
+            authDomain: "ai-tution-a7e64.firebaseapp.com",
+            projectId: "ai-tution-a7e64",
+            storageBucket: "ai-tution-a7e64.firebasestorage.app",
+            messagingSenderId: "696067351148",
+            appId: "1:696067351148:web:3b45e0127b4baf8687ae49",
+            measurementId: "G-WXK2NF2P1X"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -60,16 +62,22 @@
             signInWithPopup(auth, provider)
             .then((result) => result.user.getIdToken())
             .then((token) => {
+                // টোকেনটি সার্ভারে পাঠানো হচ্ছে
                 fetch('/google-login', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({token: token})
                 }).then(res => res.json()).then(data => {
-                    if(data.status === 'success') window.location.href = '/';
-                    else alert("Google Login Failed!");
+                    if(data.status === 'success') {
+                        window.location.href = '/';
+                    } else {
+                        alert("Google Login Failed!");
+                    }
                 });
             })
-            .catch((error) => alert(error.message));
+            .catch((error) => {
+                alert("Error: " + error.message);
+            });
         });
     </script>
 </body>
