@@ -106,13 +106,15 @@ def forgot_password():
         sender_password = "tuelxovrkmfeqolr"          
 
         try:
-            # বাংলা লেখার এরর ফিক্স করার জন্য 'utf-8' যোগ করা হয়েছে
+            # বাংলা লেখার জন্য utf-8
             msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
             msg['Subject'] = 'AI Notes - Password Reset'
             msg['From'] = f"AI Notes <{sender_email}>"
             msg['To'] = email
 
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            # SMTP_SSL এর বদলে সাধারণ SMTP এবং পোর্ট 587 ব্যবহার করা হলো
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.starttls() # কানেকশন সিকিউর করার জন্য
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, [email], msg.as_string())
                 
