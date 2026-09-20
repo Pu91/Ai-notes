@@ -98,7 +98,7 @@ def forgot_password():
         session['otp'] = otp
         
         # --- সত্যিকারের ইমেইল পাঠানোর কোড ---
-        sender_email = "আপনার_জিমেইল@gmail.com"  # <--- এখানে আপনার আসল জিমেইলটি দিন
+        sender_email = "puspenduhaldar652@gmail.com"  # <--- এখানে আপনার আসল জিমেইলটি দিন
         sender_password = "tuelxovrkmfeqolr"     # <--- আপনার দেওয়া App Password বসানো হয়েছে
 
         msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}")
