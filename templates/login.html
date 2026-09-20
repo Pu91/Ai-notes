@@ -14,7 +14,6 @@
     </style>
 </head>
 <body>
-    <!-- Popup Alert Script -->
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <script>alert("{{ messages[0] }}");</script>
@@ -32,12 +31,46 @@
         
         <div style="margin: 20px 0; color: #888;">OR</div>
         
-        <!-- Google Login Button (UI) -->
-        <button class="btn google-btn" onclick="alert('Google Auth requires Cloud API Setup. Coming soon!')">
+        <button type="button" class="btn google-btn" id="google-btn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20"> Continue with Google
         </button>
 
         <p style="margin-top: 25px;">Don't have an account? <a href="/register">Sign Up</a></p>
     </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        // এখানে আপনার Firebase Console থেকে পাওয়া Config বসান
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "...",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        document.getElementById('google-btn').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+            .then((result) => result.user.getIdToken())
+            .then((token) => {
+                fetch('/google-login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({token: token})
+                }).then(res => res.json()).then(data => {
+                    if(data.status === 'success') window.location.href = '/';
+                    else alert("Google Login Failed!");
+                });
+            })
+            .catch((error) => alert(error.message));
+        });
+    </script>
 </body>
 </html>
