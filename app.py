@@ -4,10 +4,8 @@ import google.generativeai as genai
 import os
 import uuid
 import random
-import smtplib
-from email.mime.text import MIMEText
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, auth as firebase_auth
 
 app = Flask(__name__)
 app.secret_key = "super_secret_ai_notes_key_123" 
@@ -18,10 +16,11 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+# Gemini API Key Setup
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# --- লগইন ও রেজিস্ট্রেশন (Popup সহ) ---
+# --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -34,7 +33,7 @@ def register():
             return redirect(url_for('register'))
         
         hashed_pw = generate_password_hash(password)
-        user_ref.set({'email': email, 'password': hashed_pw})
+        user_ref.set({'email': email, 'password': hashed_pw, 'auth_provider': 'email'})
         session['user'] = email
         return redirect(url_for('home'))
     return render_template('register.html')
@@ -48,7 +47,9 @@ def login():
         
         if user_ref.exists:
             user_data = user_ref.to_dict()
-            if check_password_hash(user_data['password'], password):
+            if user_data.get('auth_provider') == 'google':
+                flash("এই অ্যাকাউন্টটি গুগল দিয়ে খোলা হয়েছে। দয়া করে 'Continue with Google' এ ক্লিক করুন।", "error")
+            elif check_password_hash(user_data['password'], password):
                 session['user'] = email
                 return redirect(url_for('home'))
             else:
@@ -58,6 +59,22 @@ def login():
             
         return redirect(url_for('login'))
     return render_template('login.html')
+
+@app.route('/google-login', methods=['POST'])
+def google_login():
+    token = request.json.get('token')
+    try:
+        decoded_token = firebase_auth.verify_id_token(token)
+        email = decoded_token.get('email')
+        
+        user_ref = db.collection('users').document(email)
+        if not user_ref.get().exists:
+            user_ref.set({'email': email, 'auth_provider': 'google'})
+            
+        session['user'] = email
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 401
 
 @app.route('/logout')
 def logout():
@@ -74,12 +91,9 @@ def forgot_password():
             flash("এই ইমেইলটি আমাদের সিস্টেমে নেই!", "error")
             return redirect(url_for('forgot_password'))
             
-        # 4-digit OTP তৈরি
         otp = str(random.randint(1000, 9999))
         session['reset_email'] = email
         session['otp'] = otp
-        
-        # [নোট: এখানে ইমেইল পাঠানোর কোড বসবে। আপাতত OTP পপআপে দেখিয়ে দিচ্ছি টেস্টিংয়ের জন্য]
         flash(f"আপনার OTP হলো: {otp} (টেস্টিংয়ের জন্য)", "success")
         return redirect(url_for('verify_otp'))
     return render_template('forgot.html')
@@ -101,7 +115,7 @@ def verify_otp():
             return redirect(url_for('verify_otp'))
     return render_template('verify.html')
 
-# --- চ্যাট এবং হোমপেজ (আগের মতোই থাকবে) ---
+# --- চ্যাট এবং হোমপেজ ---
 @app.route('/')
 def home():
     if 'user' not in session: return redirect(url_for('login'))
@@ -126,7 +140,7 @@ def chat():
     session_id = request.form.get('session_id')
     
     if not session_id or session_id == "None": session_id = str(uuid.uuid4())
-    full_prompt = f"তুমি একজন স্মার্ট টিউটর...\nইউজারের প্রশ্ন: {prompt}"
+    full_prompt = f"তুমি একজন স্মার্ট টিউটর। পয়েন্ট করে গুছিয়ে উত্তর দেবে।\nইউজারের প্রশ্ন: {prompt}"
     
     try:
         model = genai.GenerativeModel('gemini-3.8-flash')
