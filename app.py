@@ -102,29 +102,9 @@ def forgot_password():
         session['reset_email'] = email
         session['otp'] = otp
         
-        sender_email = "Puspenduhaldar652@gmail.com"  
-        sender_password = "tuelxovrkmfeqolr"          
-
-        try:
-            # বাংলা লেখার জন্য utf-8
-            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
-            msg['Subject'] = 'AI Notes - Password Reset'
-            msg['From'] = f"AI Notes <{sender_email}>"
-            msg['To'] = email
-
-            # SMTP_SSL এর বদলে সাধারণ SMTP এবং পোর্ট 587 ব্যবহার করা হলো
-            with smtplib.SMTP('smtp.gmail.com', 587) as server:
-                server.starttls() # কানেকশন সিকিউর করার জন্য
-                server.login(sender_email, sender_password)
-                server.sendmail(sender_email, [email], msg.as_string())
-                
-            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
-            return redirect(url_for('verify_otp'))
-            
-        except Exception as e:
-            print("Email Error:", e)
-            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
-            return redirect(url_for('forgot_password'))
+        # Render-এর ফ্রি প্ল্যানে ইমেইল ব্লক থাকায় আপাতত স্ক্রিনেই OTP দেখাচ্ছি
+        flash(f"আপনার OTP কোড হলো: {otp} (Render-এর সিকিউরিটির জন্য স্ক্রিনেই দেওয়া হলো)", "success")
+        return redirect(url_for('verify_otp'))
             
     return render_template('forgot.html')
 
