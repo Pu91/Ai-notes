@@ -13,7 +13,6 @@ from firebase_admin import credentials, firestore, auth as firebase_auth
 
 app = Flask(__name__)
 app.secret_key = "super_secret_ai_notes_key_123" 
-# একবার লগইন করলে ৩০ দিন লগইন থাকবে
 app.permanent_session_lifetime = timedelta(days=30) 
 
 # Firebase Setup
@@ -152,9 +151,11 @@ def home():
     history = []
     if session_id:
         msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
-        for m in msgs: history.append(m.to_dict())
+        for m in msgs: 
+            data = m.to_dict()
+            data['id'] = m.id # Message ID যোগ করা হলো এডিট করার জন্য
+            history.append(data)
             
-    # ইউজারের ইমেইল টেমপ্লেটে পাঠানো হচ্ছে
     return render_template('index.html', history=history, sidebar_sessions=sidebar_sessions, current_session=session_id, user_email=user_email)
 
 @app.route('/chat', methods=['POST'])
@@ -170,7 +171,6 @@ def chat():
     img_url = None
     gemini_input = [f"তুমি একজন স্মার্ট টিউটর। পয়েন্ট করে গুছিয়ে উত্তর দেবে।\nইউজারের প্রশ্ন: {prompt}"]
     
-    # ছবি আপলোডের লজিক
     if file:
         os.makedirs('static/uploads', exist_ok=True)
         filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
@@ -199,8 +199,33 @@ def chat():
         if img_url:
             chat_data['img_url'] = img_url
             
-        session_ref.collection('messages').add(chat_data)
-        return jsonify({"response": ai_response, "session_id": session_id, "img_url": img_url})
+        update_time, doc_ref = session_ref.collection('messages').add(chat_data)
+        # Frontend-এ msg_id পাঠানো হচ্ছে যাতে এডিট করা যায়
+        return jsonify({"response": ai_response, "session_id": session_id, "img_url": img_url, "msg_id": doc_ref.id})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+# --- চ্যাট এডিট রুট ---
+@app.route('/edit_chat', methods=['POST'])
+def edit_chat():
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    user_email = session['user']
+    prompt = request.form.get('prompt')
+    session_id = request.form.get('session_id')
+    msg_id = request.form.get('msg_id')
+    
+    gemini_input = [f"তুমি একজন স্মার্ট টিউটর। পয়েন্ট করে গুছিয়ে উত্তর দেবে।\nইউজারের প্রশ্ন: {prompt}"]
+    
+    try:
+        model = genai.GenerativeModel('gemini-3.8-flash')
+        ai_response = model.generate_content(gemini_input).text
+        
+        # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
+        db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id).update({
+            'user_msg': prompt,
+            'ai_msg': ai_response
+        })
+        return jsonify({"response": ai_response})
     except Exception as e:
         return jsonify({"error": str(e)})
 
