@@ -1,5 +1,14 @@
-<form method="POST" style="text-align:center; padding:50px;">
-    <h2>Reset Password</h2>
-    <input type="email" name="email" placeholder="Enter your email" required style="padding:10px; width:250px;">
-    <button type="submit" style="padding:10px; background:#000; color:#fff;">Send OTP Code</button>
-</form>
+<!DOCTYPE html>
+<html>
+<head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; margin: 0;">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %} <script>alert("{{ messages[0] }}");</script> {% endif %}
+    {% endwith %}
+    <form method="POST" style="background: white; padding: 40px; border-radius: 12px; text-align:center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <h2>Reset Password</h2>
+        <input type="email" name="email" placeholder="Enter your email" required style="padding:10px; width:250px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd;"><br>
+        <button type="submit" style="padding:10px; width: 100%; background:#000; color:#fff; border-radius: 8px; border: none;">Send OTP Code</button>
+    </form>
+</body>
+</html>
