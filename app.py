@@ -199,7 +199,7 @@ def chat():
             gemini_input.append(img)
             
     try:
-        model = genai.GenerativeModel('gemini-3.8-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         ai_response = model.generate_content(gemini_input).text
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
