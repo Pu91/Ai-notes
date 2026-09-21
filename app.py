@@ -244,7 +244,7 @@ def edit_chat():
     gemini_input = [system_instruction]
     
     try:
-        model = genai.GenerativeModel('gemini-3.8-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         ai_response = model.generate_content(gemini_input).text
         
         # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
