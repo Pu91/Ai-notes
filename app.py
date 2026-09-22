@@ -25,7 +25,7 @@ db = firestore.client()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# --- লগইন ও রেজিস্ট্রেশন ---
+# --- লগইন ও রেজিস্ট্রেশন ---l
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -199,7 +199,7 @@ def chat():
             gemini_input.append(img)
             
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3.6-flash')
         ai_response = model.generate_content(gemini_input).text
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
@@ -244,7 +244,7 @@ def edit_chat():
     gemini_input = [system_instruction]
     
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3.6-flash')
         ai_response = model.generate_content(gemini_input).text
         
         # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
