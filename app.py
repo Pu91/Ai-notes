@@ -1,13 +1,12 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-import google.generativeai as genai
+from openai import OpenAI
 import os
 import uuid
 import random
 import smtplib
 from email.mime.text import MIMEText
 from datetime import timedelta
-from PIL import Image
 import firebase_admin
 from firebase_admin import credentials, firestore, auth as firebase_auth
 
@@ -22,10 +21,13 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+# DeepSeek Setup (Replace Gemini)
+client = OpenAI(
+    api_key="sk-e643c17a96d34f52a8a256acd2ec672b",
+    base_url="https://api.deepseek.com"
+)
 
-# --- লগইন ও রেজিস্ট্রেশন ---l
+# --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -54,15 +56,15 @@ def login():
         if user_ref.exists:
             user_data = user_ref.to_dict()
             if user_data.get('auth_provider') == 'google':
-                flash("এই অ্যাকাউন্টটি গুগল দিয়ে খোলা হয়েছে। দয়া করে 'Continue with Google' এ ক্লিক করুন।", "error")
+                flash("এই অ্যাকাউন্টটি গুগল দিয়ে খোলা হয়েছে। দয়া করে 'Continue with Google' এ ক্লিক করুন।", "error")
             elif check_password_hash(user_data['password'], password):
                 session.permanent = True
                 session['user'] = email
                 return redirect(url_for('home'))
             else:
-                flash("পাসওয়ার্ড ভুল হয়েছে!", "error")
+                flash("পাসওয়ার্ড ভুল হয়েছে!", "error")
         else:
-            flash("এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট নেই!", "error")
+            flash("এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট নেই!", "error")
             return redirect(url_for('login'))
     return render_template('login.html')
 
@@ -92,7 +94,7 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
         if not email:
-            flash("দয়া করে ইমেইল দিন!", "error")
+            flash("দয়া করে ইমেইল দিন!", "error")
             return redirect(url_for('forgot_password'))
             
         user_ref = db.collection('users').document(email).get()
@@ -108,7 +110,7 @@ def forgot_password():
         sender_password = "tuelxovrkmfeqolr"          
 
         try:
-            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
+            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
             msg['Subject'] = 'AI Notes - Password Reset'
             msg['From'] = f"AI Notes <{sender_email}>"
             msg['To'] = email
@@ -116,10 +118,10 @@ def forgot_password():
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, [email], msg.as_string())
-            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
+            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
             return redirect(url_for('verify_otp'))
         except Exception as e:
-            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
+            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
             return redirect(url_for('forgot_password'))
     return render_template('forgot.html')
 
@@ -132,10 +134,10 @@ def verify_otp():
             email = session.get('reset_email')
             hashed_pw = generate_password_hash(new_password)
             db.collection('users').document(email).update({'password': hashed_pw})
-            flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এবার লগইন করুন।", "success")
+            flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এবার লগইন করুন।", "success")
             return redirect(url_for('login'))
         else:
-            flash("OTP ভুল হয়েছে!", "error")
+            flash("OTP ভুল হয়েছে!", "error")
             return redirect(url_for('verify_otp'))
     return render_template('verify.html')
 
@@ -172,21 +174,17 @@ def chat():
     img_url = None
     
     # --- ইমেজ জেনারেশন সাপোর্ট সহ এআই প্রম্পট ---
-    system_instruction = f"""
+    system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
     
-    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
-    
-    ইউজারের প্রশ্ন: {prompt}
+    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
     """
     
-    gemini_input = [system_instruction]
-    
-    # ছবি আপলোডের লজিক
+    # ছবি আপলোডের লজিক (DeepSeek ছবি পড়তে পারে না, তবে আপনার চ্যাট হিস্ট্রিতে দেখানোর জন্য এটি সেভ হবে)
     if file:
         os.makedirs('static/uploads', exist_ok=True)
         filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
@@ -194,13 +192,20 @@ def chat():
         file.save(filepath)
         img_url = '/' + filepath
         
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-            img = Image.open(filepath)
-            gemini_input.append(img)
-            
+        # যদি প্রম্পট ফাঁকা থাকে কিন্তু ছবি থাকে
+        if not prompt:
+            prompt = "আমি একটি ফাইল আপলোড করেছি।"
+
     try:
-        model = genai.GenerativeModel('gemini-3.6-flash')
-        ai_response = model.generate_content(gemini_input).text
+        # DeepSeek API Call
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        ai_response = response.choices[0].message.content
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
@@ -230,24 +235,28 @@ def edit_chat():
     session_id = request.form.get('session_id')
     msg_id = request.form.get('msg_id')
     
-    system_instruction = f"""
+    system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
     
-    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
-    
-    ইউজারের প্রশ্ন: {prompt}
+    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
     """
-    gemini_input = [system_instruction]
     
     try:
-        model = genai.GenerativeModel('gemini-3.6-flash')
-        ai_response = model.generate_content(gemini_input).text
+        # DeepSeek API Call for Edit
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        ai_response = response.choices[0].message.content
         
-        # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
+        # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
         db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id).update({
             'user_msg': prompt,
             'ai_msg': ai_response
