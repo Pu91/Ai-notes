@@ -1,19 +1,18 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-import google.generativeai as genai
+from groq import Groq
 import os
 import uuid
 import random
 import smtplib
 from email.mime.text import MIMEText
 from datetime import timedelta
-from PIL import Image
 import firebase_admin
 from firebase_admin import credentials, firestore, auth as firebase_auth
 
 app = Flask(__name__)
 app.secret_key = "super_secret_ai_notes_key_123" 
-# à¦à¦•à¦¬à¦¾à¦° à¦²à¦—à¦‡à¦¨ à¦•à¦°à¦²à§‡ à§©à§¦ à¦¦à¦¿à¦¨ à¦²à¦—à¦‡à¦¨ à¦¥à¦¾à¦•à¦¬à§‡
+# একবার লগইন করলে ৩০ দিন লগইন থাকবে
 app.permanent_session_lifetime = timedelta(days=30) 
 
 # Firebase Setup
@@ -22,10 +21,11 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+# Groq Setup (Render-এর Environment Variable থেকে Key নেবে)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY)
 
-# --- à¦²à¦—à¦‡à¦¨ à¦“ à¦°à§‡à¦œà¦¿à¦¸à§à¦Ÿà§à¦°à§‡à¦¶à¦¨ ---l
+# --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -34,7 +34,7 @@ def register():
         user_ref = db.collection('users').document(email)
         
         if user_ref.get().exists:
-            flash("à¦à¦‡ à¦‡à¦®à§‡à¦‡à¦²à¦Ÿà¦¿ à¦†à¦—à§‡ à¦¥à§‡à¦•à§‡à¦‡ à¦°à§‡à¦œà¦¿à¦¸à§à¦Ÿà¦¾à¦° à¦•à¦°à¦¾ à¦†à¦›à§‡!", "error")
+            flash("এই ইমেইলটি আগে থেকেই রেজিস্টার করা আছে!", "error")
             return redirect(url_for('register'))
         
         hashed_pw = generate_password_hash(password)
@@ -54,15 +54,15 @@ def login():
         if user_ref.exists:
             user_data = user_ref.to_dict()
             if user_data.get('auth_provider') == 'google':
-                flash("à¦à¦‡ à¦…à§à¦¯à¦¾à¦•à¦¾à¦‰à¦¨à§à¦Ÿà¦Ÿà¦¿ à¦—à§à¦—à¦² à¦¦à¦¿à§Ÿà§‡ à¦–à§‹à¦²à¦¾ à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à¦¦à§Ÿà¦¾ à¦•à¦°à§‡ 'Continue with Google' à¦ à¦•à§à¦²à¦¿à¦• à¦•à¦°à§à¦¨à¥¤", "error")
+                flash("এই অ্যাকাউন্টটি গুগল দিয়ে খোলা হয়েছে। দয়া করে 'Continue with Google' এ ক্লিক করুন।", "error")
             elif check_password_hash(user_data['password'], password):
                 session.permanent = True
                 session['user'] = email
                 return redirect(url_for('home'))
             else:
-                flash("à¦ªà¦¾à¦¸à¦“à§Ÿà¦¾à¦°à§à¦¡ à¦­à§à¦² à¦¹à§Ÿà§‡à¦›à§‡!", "error")
+                flash("পাসওয়ার্ড ভুল হয়েছে!", "error")
         else:
-            flash("à¦à¦‡ à¦‡à¦®à§‡à¦‡à¦² à¦¦à¦¿à§Ÿà§‡ à¦•à§‹à¦¨à§‹ à¦…à§à¦¯à¦¾à¦•à¦¾à¦‰à¦¨à§à¦Ÿ à¦¨à§‡à¦‡!", "error")
+            flash("এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট নেই!", "error")
             return redirect(url_for('login'))
     return render_template('login.html')
 
@@ -92,12 +92,12 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
         if not email:
-            flash("à¦¦à§Ÿà¦¾ à¦•à¦°à§‡ à¦‡à¦®à§‡à¦‡à¦² à¦¦à¦¿à¦¨!", "error")
+            flash("দয়া করে ইমেইল দিন!", "error")
             return redirect(url_for('forgot_password'))
             
         user_ref = db.collection('users').document(email).get()
         if not user_ref.exists:
-            flash("à¦à¦‡ à¦‡à¦®à§‡à¦‡à¦²à¦Ÿà¦¿ à¦†à¦®à¦¾à¦¦à§‡à¦° à¦¸à¦¿à¦¸à§à¦Ÿà§‡à¦®à§‡ à¦¨à§‡à¦‡!", "error")
+            flash("এই ইমেইলটি আমাদের সিস্টেমে নেই!", "error")
             return redirect(url_for('forgot_password'))
             
         otp = str(random.randint(1000, 9999))
@@ -108,7 +108,7 @@ def forgot_password():
         sender_password = "tuelxovrkmfeqolr"          
 
         try:
-            msg = MIMEText(f"à¦†à¦ªà¦¨à¦¾à¦° à¦ªà¦¾à¦¸à¦“à§Ÿà¦¾à¦°à§à¦¡ à¦°à¦¿à¦¸à§‡à¦Ÿ à¦•à¦°à¦¾à¦° OTP à¦•à§‹à¦¡ à¦¹à¦²à§‹: {otp}", 'plain', 'utf-8')
+            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
             msg['Subject'] = 'AI Notes - Password Reset'
             msg['From'] = f"AI Notes <{sender_email}>"
             msg['To'] = email
@@ -116,10 +116,10 @@ def forgot_password():
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, [email], msg.as_string())
-            flash("à¦†à¦ªà¦¨à¦¾à¦° à¦‡à¦®à§‡à¦‡à¦²à§‡ OTP à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à§Ÿà§‡à¦›à§‡! à¦‡à¦¨à¦¬à¦•à§à¦¸ à¦šà§‡à¦• à¦•à¦°à§à¦¨à¥¤", "success")
+            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
             return redirect(url_for('verify_otp'))
         except Exception as e:
-            flash("à¦‡à¦®à§‡à¦‡à¦² à¦ªà¦¾à¦ à¦¾à¦¤à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à¦šà§à¦›à§‡à¥¤ à¦¦à§Ÿà¦¾ à¦•à¦°à§‡ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦•à¦°à§à¦¨à¥¤", "error")
+            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
             return redirect(url_for('forgot_password'))
     return render_template('forgot.html')
 
@@ -132,14 +132,14 @@ def verify_otp():
             email = session.get('reset_email')
             hashed_pw = generate_password_hash(new_password)
             db.collection('users').document(email).update({'password': hashed_pw})
-            flash("à¦ªà¦¾à¦¸à¦“à§Ÿà¦¾à¦°à§à¦¡ à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦ªà¦°à¦¿à¦¬à¦°à§à¦¤à¦¨ à¦¹à§Ÿà§‡à¦›à§‡! à¦à¦¬à¦¾à¦° à¦²à¦—à¦‡à¦¨ à¦•à¦°à§à¦¨à¥¤", "success")
+            flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এবার লগইন করুন।", "success")
             return redirect(url_for('login'))
         else:
-            flash("OTP à¦­à§à¦² à¦¹à§Ÿà§‡à¦›à§‡!", "error")
+            flash("OTP ভুল হয়েছে!", "error")
             return redirect(url_for('verify_otp'))
     return render_template('verify.html')
 
-# --- à¦šà§à¦¯à¦¾à¦Ÿ à¦à¦¬à¦‚ à¦¹à§‹à¦®à¦ªà§‡à¦œ ---
+# --- চ্যাট এবং হোমপেজ ---
 @app.route('/')
 def home():
     if 'user' not in session: return redirect(url_for('login'))
@@ -171,22 +171,18 @@ def chat():
     
     img_url = None
     
-    # --- à¦‡à¦®à§‡à¦œ à¦œà§‡à¦¨à¦¾à¦°à§‡à¦¶à¦¨ à¦¸à¦¾à¦ªà§‹à¦°à§à¦Ÿ à¦¸à¦¹ à¦à¦†à¦‡ à¦ªà§à¦°à¦®à§à¦ªà¦Ÿ ---
-    system_instruction = f"""
-    à¦¤à§à¦®à¦¿ à¦à¦•à¦œà¦¨ à¦¸à§à¦®à¦¾à¦°à§à¦Ÿ à¦à¦†à¦‡à¥¤ 
-    à§§. à¦¸à¦¾à¦§à¦¾à¦°à¦£ à¦ªà§à¦°à¦¶à§à¦¨à§‡à¦° à¦‰à¦¤à§à¦¤à¦° à¦ªà§Ÿà§‡à¦¨à§à¦Ÿ à¦•à¦°à§‡ à¦—à§à¦›à¦¿à§Ÿà§‡ à¦¬à¦¾à¦‚à¦²à¦¾à§Ÿ à¦¦à§‡à¦¬à§‡à¥¤
-    à§¨. à¦•à¦¿à¦¨à§à¦¤à§ à¦¯à¦¦à¦¿ à¦‡à¦‰à¦œà¦¾à¦° à¦•à§‹à¦¨à§‹ à¦›à¦¬à¦¿ à¦¤à§ˆà¦°à¦¿ à¦•à¦°à¦¤à§‡ à¦¬à¦¾ à¦†à¦à¦•à¦¤à§‡ à¦¬à¦²à§‡ (à¦¯à§‡à¦®à¦¨: "à¦à¦•à¦Ÿà¦¿ à¦•à§à¦•à§à¦°à§‡à¦° à¦›à¦¬à¦¿ à¦¦à¦¾à¦“", "Generate an image", "create a picture"), 
-    à¦¤à¦¾à¦¹à¦²à§‡ à¦¤à§à¦®à¦¿ à¦•à§‹à¦¨à§‹ à¦¬à§à¦¯à¦¾à¦–à§à¦¯à¦¾à¦®à§‚à¦²à¦• à¦•à¦¥à¦¾ à¦¨à¦¾ à¦¬à¦²à§‡ à¦¶à§à¦§à§ à¦¨à¦¿à¦šà§‡à¦° HTML à¦Ÿà§à¦¯à¦¾à¦—à¦Ÿà¦¿ à¦‰à¦¤à§à¦¤à¦° à¦¹à¦¿à¦¸à§‡à¦¬à§‡ à¦¦à§‡à¦¬à§‡:
+    # --- ইমেজ জেনারেশন সাপোর্ট সহ এআই প্রম্পট ---
+    system_instruction = """
+    তুমি একজন স্মার্ট এআই। 
+    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
+    তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
     
-    * ENGLISH_PROMPT à¦à¦° à¦œà¦¾à§Ÿà¦—à¦¾à§Ÿ à¦‡à¦‰à¦œà¦¾à¦°à§‡à¦° à¦šà¦¾à¦“à§Ÿà¦¾ à¦›à¦¬à¦¿à¦Ÿà¦¿à¦° à¦à¦•à¦Ÿà¦¿ à¦¸à§à¦¨à§à¦¦à¦° à¦“ à¦¬à¦¿à¦¸à§à¦¤à¦¾à¦°à¦¿à¦¤ à¦‡à¦‚à¦°à§‡à¦œà¦¿ à¦¡à§‡à¦¸à¦•à§à¦°à¦¿à¦ªà¦¶à¦¨ à¦²à¦¿à¦–à¦¬à§‡ à¦à¦¬à¦‚ à¦¶à¦¬à§à¦¦à§‡à¦° à¦®à¦¾à¦à¦–à¦¾à¦¨à§‡à¦° à¦¸à§à¦ªà§‡à¦¸à§‡à¦° à¦¬à¦¦à¦²à§‡ %20 à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à¦¬à§‡à¥¤
-    
-    à¦‡à¦‰à¦œà¦¾à¦°à§‡à¦° à¦ªà§à¦°à¦¶à§à¦¨: {prompt}
+    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
     """
     
-    gemini_input = [system_instruction]
-    
-    # à¦›à¦¬à¦¿ à¦†à¦ªà¦²à§‹à¦¡à§‡à¦° à¦²à¦œà¦¿à¦•
+    # ছবি আপলোডের লজিক (Groq টেক্সট মডেল, তাই ছবি হিস্ট্রিতে সেভ হবে কিন্তু API-তে যাবে না)
     if file:
         os.makedirs('static/uploads', exist_ok=True)
         filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
@@ -194,13 +190,19 @@ def chat():
         file.save(filepath)
         img_url = '/' + filepath
         
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-            img = Image.open(filepath)
-            gemini_input.append(img)
-            
+        if not prompt:
+            prompt = "আমি একটি ফাইল আপলোড করেছি।"
+
     try:
-        model = genai.GenerativeModel('gemini-3.6-flash')
-        ai_response = model.generate_content(gemini_input).text
+        # Groq API Call (Using Llama 3.3 70B model)
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        ai_response = response.choices[0].message.content
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
@@ -221,7 +223,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# --- à¦šà§à¦¯à¦¾à¦Ÿ à¦à¦¡à¦¿à¦Ÿ à¦°à§à¦Ÿ ---
+# --- চ্যাট এডিট রুট ---
 @app.route('/edit_chat', methods=['POST'])
 def edit_chat():
     if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
@@ -230,24 +232,28 @@ def edit_chat():
     session_id = request.form.get('session_id')
     msg_id = request.form.get('msg_id')
     
-    system_instruction = f"""
-    à¦¤à§à¦®à¦¿ à¦à¦•à¦œà¦¨ à¦¸à§à¦®à¦¾à¦°à§à¦Ÿ à¦à¦†à¦‡à¥¤ 
-    à§§. à¦¸à¦¾à¦§à¦¾à¦°à¦£ à¦ªà§à¦°à¦¶à§à¦¨à§‡à¦° à¦‰à¦¤à§à¦¤à¦° à¦ªà§Ÿà§‡à¦¨à§à¦Ÿ à¦•à¦°à§‡ à¦—à§à¦›à¦¿à§Ÿà§‡ à¦¬à¦¾à¦‚à¦²à¦¾à§Ÿ à¦¦à§‡à¦¬à§‡à¥¤
-    à§¨. à¦•à¦¿à¦¨à§à¦¤à§ à¦¯à¦¦à¦¿ à¦‡à¦‰à¦œà¦¾à¦° à¦•à§‹à¦¨à§‹ à¦›à¦¬à¦¿ à¦¤à§ˆà¦°à¦¿ à¦•à¦°à¦¤à§‡ à¦¬à¦¾ à¦†à¦à¦•à¦¤à§‡ à¦¬à¦²à§‡ (à¦¯à§‡à¦®à¦¨: "à¦à¦•à¦Ÿà¦¿ à¦•à§à¦•à§à¦°à§‡à¦° à¦›à¦¬à¦¿ à¦¦à¦¾à¦“", "Generate an image", "create a picture"), 
-    à¦¤à¦¾à¦¹à¦²à§‡ à¦¤à§à¦®à¦¿ à¦•à§‹à¦¨à§‹ à¦¬à§à¦¯à¦¾à¦–à§à¦¯à¦¾à¦®à§‚à¦²à¦• à¦•à¦¥à¦¾ à¦¨à¦¾ à¦¬à¦²à§‡ à¦¶à§à¦§à§ à¦¨à¦¿à¦šà§‡à¦° HTML à¦Ÿà§à¦¯à¦¾à¦—à¦Ÿà¦¿ à¦‰à¦¤à§à¦¤à¦° à¦¹à¦¿à¦¸à§‡à¦¬à§‡ à¦¦à§‡à¦¬à§‡:
+    system_instruction = """
+    তুমি একজন স্মার্ট এআই। 
+    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
+    তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
     
-    * ENGLISH_PROMPT à¦à¦° à¦œà¦¾à§Ÿà¦—à¦¾à§Ÿ à¦‡à¦‰à¦œà¦¾à¦°à§‡à¦° à¦šà¦¾à¦“à§Ÿà¦¾ à¦›à¦¬à¦¿à¦Ÿà¦¿à¦° à¦à¦•à¦Ÿà¦¿ à¦¸à§à¦¨à§à¦¦à¦° à¦“ à¦¬à¦¿à¦¸à§à¦¤à¦¾à¦°à¦¿à¦¤ à¦‡à¦‚à¦°à§‡à¦œà¦¿ à¦¡à§‡à¦¸à¦•à§à¦°à¦¿à¦ªà¦¶à¦¨ à¦²à¦¿à¦–à¦¬à§‡ à¦à¦¬à¦‚ à¦¶à¦¬à§à¦¦à§‡à¦° à¦®à¦¾à¦à¦–à¦¾à¦¨à§‡à¦° à¦¸à§à¦ªà§‡à¦¸à§‡à¦° à¦¬à¦¦à¦²à§‡ %20 à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦•à¦°à¦¬à§‡à¥¤
-    
-    à¦‡à¦‰à¦œà¦¾à¦°à§‡à¦° à¦ªà§à¦°à¦¶à§à¦¨: {prompt}
+    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
     """
-    gemini_input = [system_instruction]
     
     try:
-        model = genai.GenerativeModel('gemini-3.6-flash')
-        ai_response = model.generate_content(gemini_input).text
+        # Groq API Call for Edit
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        ai_response = response.choices[0].message.content
         
-        # à¦¡à§‡à¦Ÿà¦¾à¦¬à§‡à¦¸à§‡ à¦†à¦—à§‡à¦° à¦®à§‡à¦¸à§‡à¦œ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦•à¦°à§‡ à¦¦à§‡à¦“à§Ÿà¦¾
+        # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
         db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id).update({
             'user_msg': prompt,
             'ai_msg': ai_response
