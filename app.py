@@ -196,7 +196,7 @@ def chat():
     try:
         # Groq API Call (Using Llama 3.3 70B model)
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama3-70b-8192",
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": prompt}
@@ -245,7 +245,7 @@ def edit_chat():
     try:
         # Groq API Call for Edit
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama3-70b-8192",
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": prompt}
