@@ -5,6 +5,7 @@ import os
 import uuid
 import random
 import smtplib
+import base64
 from email.mime.text import MIMEText
 from datetime import timedelta
 import firebase_admin
@@ -12,7 +13,6 @@ from firebase_admin import credentials, firestore, auth as firebase_auth
 
 app = Flask(__name__)
 app.secret_key = "super_secret_ai_notes_key_123" 
-# একবার লগইন করলে ৩০ দিন লগইন থাকবে
 app.permanent_session_lifetime = timedelta(days=30) 
 
 # Firebase Setup
@@ -21,32 +21,74 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# Groq Setup (Render-এর Environment Variable থেকে Key নেবে)
+# Groq Setup
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
-def get_ai_response(system_instruction, prompt):
-    models = [
-        "llama-3.1-8b-instant",
-        "openai/gpt-oss-120b",
-        "llama3-70b-8192",
-        "llama3-8b-8192"
-    ]
-    last_error = None
-    for model_name in models:
-        try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            last_error = e
-            continue
-    raise last_error
+# ছবিকে এআই-এর পড়ার উপযোগী (Base64) করার ফাংশন
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+def get_ai_response(system_instruction, prompt, image_path=None):
+    # যদি ইউজার ছবি আপলোড করে তবে Vision Model কাজ করবে
+    if image_path:
+        base64_image = encode_image(image_path)
+        vision_models = [
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+            "llama-3.2-90b-vision-preview",
+            "llama-3.2-11b-vision-preview"
+        ]
+        last_error = None
+        for model_name in vision_models:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": f"{system_instruction}\n\nইউজারের নির্দেশ: {prompt}"},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}",
+                                    },
+                                },
+                            ],
+                        }
+                    ]
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                last_error = e
+                continue
+        raise last_error
+
+    # যদি শুধু টেক্সট মেসেজ হয় তবে সাধারণ Text Model কাজ করবে
+    else:
+        text_models = [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "openai/gpt-oss-120b",
+            "llama3-70b-8192"
+        ]
+        last_error = None
+        for model_name in text_models:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                last_error = e
+                continue
+        raise last_error
 
 # --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
@@ -193,11 +235,11 @@ def chat():
     if not session_id or session_id == "None": session_id = str(uuid.uuid4())
     
     img_url = None
+    saved_filepath = None
     
-    # --- ইমেজ জেনারেশন সাপোর্ট সহ এআই প্রম্পট ---
     system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -205,20 +247,20 @@ def chat():
     * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
     """
     
-    # ছবি আপলোডের লজিক (Groq টেক্সট মডেল, তাই ছবি হিস্ট্রিতে সেভ হবে কিন্তু API-তে যাবে না)
+    # ছবি আপলোডের লজিক
     if file:
         os.makedirs('static/uploads', exist_ok=True)
         filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
-        filepath = os.path.join('static/uploads', filename)
-        file.save(filepath)
-        img_url = '/' + filepath
+        saved_filepath = os.path.join('static/uploads', filename)
+        file.save(saved_filepath)
+        img_url = '/' + saved_filepath
         
         if not prompt:
-            prompt = "আমি একটি ফাইল আপলোড করেছি।"
+            prompt = "এই ছবিতে যা লেখা আছে তা পড়ে বাংলায় সমাধান করে দাও।"
 
     try:
-        # Groq API Call
-        ai_response = get_ai_response(system_instruction, prompt)
+        # ছবি থাকলে ছবি ও টেক্সট একসাথে যাবে, না থাকলে শুধু টেক্সট যাবে
+        ai_response = get_ai_response(system_instruction, prompt, image_path=saved_filepath)
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
@@ -259,10 +301,8 @@ def edit_chat():
     """
     
     try:
-        # Groq API Call for Edit
         ai_response = get_ai_response(system_instruction, prompt)
         
-        # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
         db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id).update({
             'user_msg': prompt,
             'ai_msg': ai_response
