@@ -32,7 +32,7 @@ def encode_image(image_path):
 
 def get_ai_response(system_instruction, prompt, image_path=None):
     # যদি ইউজার ছবি আপলোড করে তবে Vision Model কাজ করবে
-    if image_path:
+    if image_path and os.path.exists(image_path):
         base64_image = encode_image(image_path)
         vision_models = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -239,7 +239,7 @@ def chat():
     
     system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -256,7 +256,7 @@ def chat():
         img_url = '/' + saved_filepath
         
         if not prompt:
-            prompt = "এই ছবিতে যা লেখা আছে তা পড়ে বাংলায় সমাধান করে দাও।"
+            prompt = "এই ছবিতে যা লেখা আছে তা পড়ে বাংলায় নোটস বা উত্তর তৈরি করে দাও।"
 
     try:
         # ছবি থাকলে ছবি ও টেক্সট একসাথে যাবে, না থাকলে শুধু টেক্সট যাবে
@@ -281,7 +281,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# --- চ্যাট এডিট রুট ---
+# --- চ্যাট এডিট রুট (Fixed 404 temp-id Error & Added Image Support) ---
 @app.route('/edit_chat', methods=['POST'])
 def edit_chat():
     if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
@@ -292,7 +292,7 @@ def edit_chat():
     
     system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -301,12 +301,36 @@ def edit_chat():
     """
     
     try:
-        ai_response = get_ai_response(system_instruction, prompt)
+        saved_filepath = None
+        doc_ref = None
         
-        db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id).update({
-            'user_msg': prompt,
-            'ai_msg': ai_response
-        })
+        # আগের মেসেজে কোনো ছবি ছিল কি না তা চেক করা হচ্ছে
+        if session_id and session_id != "None" and msg_id and not str(msg_id).startswith('temp-'):
+            doc_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id)
+            doc_snap = doc_ref.get()
+            if doc_snap.exists:
+                img_url = doc_snap.to_dict().get('img_url')
+                if img_url:
+                    potential_path = img_url.lstrip('/')
+                    if os.path.exists(potential_path):
+                        saved_filepath = potential_path
+
+        # এআই থেকে নতুন উত্তর নেওয়া (ছবি থাকলে ছবি সহ)
+        ai_response = get_ai_response(system_instruction, prompt, image_path=saved_filepath)
+        
+        # যদি মেসেজটি ডেটাবেসে আগে থেকেই থাকে তবে আপডেট করবে, আর temp- হলে নতুন করে সেভ করবে (ফলে 404 এরর আসবে না)
+        if doc_ref and doc_ref.get().exists:
+            doc_ref.update({
+                'user_msg': prompt,
+                'ai_msg': ai_response
+            })
+        elif session_id and session_id != "None":
+            db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').add({
+                'user_msg': prompt,
+                'ai_msg': ai_response,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            })
+            
         return jsonify({"response": ai_response})
     except Exception as e:
         return jsonify({"error": str(e)})
