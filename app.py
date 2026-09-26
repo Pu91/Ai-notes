@@ -25,6 +25,29 @@ db = firestore.client()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
+def get_ai_response(system_instruction, prompt):
+    models = [
+        "llama-3.1-8b-instant",
+        "openai/gpt-oss-120b",
+        "llama3-70b-8192",
+        "llama3-8b-8192"
+    ]
+    last_error = None
+    for model_name in models:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            last_error = e
+            continue
+    raise last_error
+
 # --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -194,15 +217,8 @@ def chat():
             prompt = "আমি একটি ফাইল আপলোড করেছি।"
 
     try:
-        # Groq API Call (Using Llama 3.3 70B model)
-        response = client.chat.completions.create(
-            model="llama3-70b-8192",
-            messages=[
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        ai_response = response.choices[0].message.content
+        # Groq API Call
+        ai_response = get_ai_response(system_instruction, prompt)
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
@@ -244,14 +260,7 @@ def edit_chat():
     
     try:
         # Groq API Call for Edit
-        response = client.chat.completions.create(
-            model="llama3-70b-8192",
-            messages=[
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        ai_response = response.choices[0].message.content
+        ai_response = get_ai_response(system_instruction, prompt)
         
         # ডেটাবেসে আগের মেসেজ আপডেট করে দেওয়া
         db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id).update({
