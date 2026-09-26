@@ -2,10 +2,15 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from werkzeug.security import generate_password_hash, check_password_hash
 from groq import Groq
 import os
+import io
+import json
 import uuid
 import random
 import smtplib
 import base64
+import urllib.request
+from PIL import Image
+import PyPDF2
 from email.mime.text import MIMEText
 from datetime import timedelta
 import firebase_admin
@@ -25,70 +30,111 @@ db = firestore.client()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
-# ছবিকে এআই-এর পড়ার উপযোগী (Base64) করার ফাংশন
+# ছবিকে রিসাইজ ও কমপ্রেস করে Base64-এ রূপান্তর করার ফাংশন
 def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+    with Image.open(image_path) as img:
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        img.thumbnail((1024, 1024))
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=85)
+        return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
+# ছবির ভেতরের লেখা বা প্রশ্ন পড়ার ফাংশন
+def extract_text_from_image(base64_image):
+    ocr_prompt = "Read and transcribe all the text and questions from this image accurately as it is."
+    
+    # Groq-এর চালু থাকা ভিশন মডেল খুঁজে বের করা
+    vision_models = [
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "meta-llama/llama-4-maverick-17b-128e-instruct"
+    ]
+    try:
+        available_models = [m.id for m in client.models.list().data]
+        for m_id in available_models:
+            if any(k in m_id.lower() for k in ["scout", "maverick", "vision", "llama-4"]):
+                if m_id not in vision_models:
+                    vision_models.append(m_id)
+    except Exception:
+        pass
+
+    for model_name in vision_models:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": ocr_prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                            }
+                        ]
+                    }
+                ]
+            )
+            return response.choices[0].message.content
+        except Exception:
+            continue
+
+    # ব্যাকআপ OpenAI Vision এপিআই (যদি Groq ভিশন মডেল রেসপন্স না করে)
+    payload = json.dumps({
+        "model": "openai",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": ocr_prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                ]
+            }
+        ]
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        "https://text.pollinations.ai/openai",
+        data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+    )
+    with urllib.request.urlopen(req, timeout=45) as resp:
+        res_data = json.loads(resp.read().decode('utf-8'))
+        return res_data['choices'][0]['message']['content']
+
+# Groq-এর OpenAI মডেল দিয়ে মূল উত্তর তৈরি করার ফাংশন
 def get_ai_response(system_instruction, prompt, image_path=None):
-    # যদি ইউজার ছবি আপলোড করে তবে Vision Model কাজ করবে
+    final_prompt = prompt
+
+    # যদি ছবি আপলোড করা হয়, আগে ছবির লেখাগুলো পড়ে নেওয়া হবে
     if image_path and os.path.exists(image_path):
         base64_image = encode_image(image_path)
-        vision_models = [
-            "meta-llama/llama-4-scout-17b-16e-instruct",
-            "meta-llama/llama-4-maverick-17b-128e-instruct",
-            "llama-3.2-90b-vision-preview",
-            "llama-3.2-11b-vision-preview"
-        ]
-        last_error = None
-        for model_name in vision_models:
-            try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": f"{system_instruction}\n\nইউজারের নির্দেশ: {prompt}"},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}",
-                                    },
-                                },
-                            ],
-                        }
-                    ]
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                last_error = e
-                continue
-        raise last_error
+        extracted_text = extract_text_from_image(base64_image)
+        final_prompt = f"ছবির ভেতরের লেখা/প্রশ্নসমূহ:\n{extracted_text}\n\nইউজারের নির্দেশ: {prompt}\n(উপরের ছবির প্রশ্ন বা বিষয়বস্তুর ওপর ভিত্তি করে পয়েন্ট করে বাংলায় বিস্তারিত উত্তর বা নোটস দাও।)"
 
-    # যদি শুধু টেক্সট মেসেজ হয় তবে সাধারণ Text Model কাজ করবে
-    else:
-        text_models = [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "openai/gpt-oss-120b",
-            "llama3-70b-8192"
-        ]
-        last_error = None
-        for model_name in text_models:
-            try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                last_error = e
-                continue
-        raise last_error
+    # Groq-এর OpenAI মডেলগুলো সবার ওপরে রাখা হয়েছে
+    openai_and_fallback_models = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant"
+    ]
+    
+    last_error = None
+    for model_name in openai_and_fallback_models:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": final_prompt}
+                ]
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            last_error = e
+            continue
+            
+    raise last_error
 
 # --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
@@ -239,7 +285,7 @@ def chat():
     
     system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -247,19 +293,30 @@ def chat():
     * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
     """
     
-    # ছবি আপলোডের লজিক
+    # ফাইল এবং ছবি আপলোডের লজিক
     if file:
         os.makedirs('static/uploads', exist_ok=True)
         filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
-        saved_filepath = os.path.join('static/uploads', filename)
-        file.save(saved_filepath)
-        img_url = '/' + saved_filepath
+        filepath = os.path.join('static/uploads', filename)
+        file.save(filepath)
+        
+        if filename.lower().endswith('.pdf'):
+            try:
+                reader = PyPDF2.PdfReader(filepath)
+                pdf_text = ""
+                for page in reader.pages:
+                    pdf_text += page.extract_text() or ""
+                prompt = f"{prompt}\n\n[PDF Content]:\n{pdf_text[:4000]}"
+            except Exception:
+                pass
+        else:
+            img_url = '/' + filepath
+            saved_filepath = filepath
         
         if not prompt:
-            prompt = "এই ছবিতে যা লেখা আছে তা পড়ে বাংলায় নোটস বা উত্তর তৈরি করে দাও।"
+            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর তৈরি করে দাও।"
 
     try:
-        # ছবি থাকলে ছবি ও টেক্সট একসাথে যাবে, না থাকলে শুধু টেক্সট যাবে
         ai_response = get_ai_response(system_instruction, prompt, image_path=saved_filepath)
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
@@ -281,7 +338,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# --- চ্যাট এডিট রুট (Fixed 404 temp-id Error & Added Image Support) ---
+# --- চ্যাট এডিট রুট ---
 @app.route('/edit_chat', methods=['POST'])
 def edit_chat():
     if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
@@ -292,7 +349,7 @@ def edit_chat():
     
     system_instruction = """
     তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে বাংলায় দেবে।
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -304,7 +361,6 @@ def edit_chat():
         saved_filepath = None
         doc_ref = None
         
-        # আগের মেসেজে কোনো ছবি ছিল কি না তা চেক করা হচ্ছে
         if session_id and session_id != "None" and msg_id and not str(msg_id).startswith('temp-'):
             doc_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id)
             doc_snap = doc_ref.get()
@@ -315,10 +371,8 @@ def edit_chat():
                     if os.path.exists(potential_path):
                         saved_filepath = potential_path
 
-        # এআই থেকে নতুন উত্তর নেওয়া (ছবি থাকলে ছবি সহ)
         ai_response = get_ai_response(system_instruction, prompt, image_path=saved_filepath)
         
-        # যদি মেসেজটি ডেটাবেসে আগে থেকেই থাকে তবে আপডেট করবে, আর temp- হলে নতুন করে সেভ করবে (ফলে 404 এরর আসবে না)
         if doc_ref and doc_ref.get().exists:
             doc_ref.update({
                 'user_msg': prompt,
