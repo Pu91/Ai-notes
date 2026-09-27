@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from groq import Groq
 import os
 import io
+import re
 import uuid
 import random
 import smtplib
@@ -33,15 +34,61 @@ def encode_image(image_path):
     with Image.open(image_path) as img:
         if img.mode != 'RGB':
             img = img.convert('RGB')
-        img.thumbnail((1200, 1200))
+        img.thumbnail((1400, 1400))
         buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=85)
+        img.save(buffer, format="JPEG", quality=88)
         return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-def get_ai_response(system_instruction, prompt, base64_image=None):
+# অগোছালো ** বা ### চিহ্ন সরিয়ে পরিষ্কার ও সুন্দর সাজানো টেক্সট তৈরি করার ফাংশন
+def clean_and_format_response(text):
+    if not text or "<img" in text:
+        return text
+    # যদি এআই ভুল করেও **বোল্ড** লেখে, সেটিকে HTML <b> ট্যাগে রূপান্তর করবে যাতে ** দেখা না যায়
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    # লাইনের শুরুতে থাকা অপ্রয়োজনীয় ### বা ## সরিয়ে বোল্ড করে দেওয়া
+    text = re.sub(r'(?m)^#{1,6}\s*(.*?)$', r'<b><u>\1</u></b>', text)
+    # যেকোনো ছড়িয়ে ছিটিয়ে থাকা সিঙ্গেল * চিহ্নকে বুলেট পয়েন্ট (•) করে দেওয়া
+    text = re.sub(r'(?m)^\s*\*\s+', '• ', text)
+    text = re.sub(r'(?m)^\s*-\s+', '• ', text)
+    return text
+
+# এআই-এর জন্য মাস্টার ফরম্যাটিং নির্দেশাবলী
+SYSTEM_INSTRUCTION = """
+তুমি একজন অত্যন্ত দক্ষ ও অভিজ্ঞ এআই শিক্ষক এবং নোটস মেকার। উত্তর দেওয়ার সময় নিচের নিয়মগুলো কঠোরভাবে মেনে চলবে:
+
+১. কোনো অবস্থাতেই লেখার ভেতরে স্টার চিহ্ন (** বা *) কিংবা হ্যাশট্যাগ (### বা ##) ব্যবহার করবে না। 
+২. পুরো উত্তরটি একদম পরিষ্কার, সুন্দর ও গোছানো বাংলায় লিখবে। প্রতিটি প্যারাগ্রাফের মাঝে ফাঁকা লাইন রাখবে যাতে পড়তে আরামদায়ক হয়।
+৩. প্রধান পয়েন্টগুলো ১., ২., ৩. এভাবে নম্বর দিয়ে লিখবে এবং পয়েন্টের হেডিং বোল্ড করবে (যেমন: <b>১. প্রধান বিষয়:</b>)।
+৪. ভেতরের সাব-পয়েন্ট বা বৈশিষ্ট্যগুলো লেখার সময় অবশ্যই গোল বুলেট (• বা ○) ব্যবহার করবে এবং পয়েন্টের মূল শব্দটির নিচে আন্ডারলাইন করে তারপর বিস্তারিত লিখবে। 
+   উদাহরণস্বরূপ:
+   • <u><b>বৈশিষ্ট্য:</b></u> এখানে খুব সহজ ও সুন্দরভাবে বিস্তারিত ব্যাখ্যা লিখবে।
+   • <u><b>গঠন ও কাজ:</b></u> এখানে ওই বিষয়ের গঠন ও কাজ গুছিয়ে লিখবে।
+   • <u><b>উদাহরণ:</b></u> উপযুক্ত উদাহরণ দেবে।
+৫. ইউজার যদি কোনো কিছুর 'পার্থক্য' (Difference), তুলনা বা ছক চায়, তবে কোনো সাধারণ লেখার বদলে অবশ্যই নিচের মতো পরিষ্কার HTML Table তৈরি করে দেবে:
+   <table style="width:100%; border-collapse:collapse; margin:12px 0; font-size:15px;">
+     <thead>
+       <tr style="background-color:#2563eb; color:#ffffff; text-align:left;">
+         <th style="border:1px solid #cbd5e1; padding:8px;">বিষয়</th>
+         <th style="border:1px solid #cbd5e1; padding:8px;">প্রথম বিষয়</th>
+         <th style="border:1px solid #cbd5e1; padding:8px;">দ্বিতীয় বিষয়</th>
+       </tr>
+     </thead>
+     <tbody>
+       <tr>
+         <td style="border:1px solid #cbd5e1; padding:8px;"><b>১. সংজ্ঞা</b></td>
+         <td style="border:1px solid #cbd5e1; padding:8px;">...</td>
+         <td style="border:1px solid #cbd5e1; padding:8px;">...</td>
+       </tr>
+     </tbody>
+   </table>
+৬. যদি ইউজার কোনো ছবি আঁকতে বা জেনারেট করতে বলে (যেমন: "একটি বাঘের ছবি দাও", "Generate an image"), শুধুমাত্র তখন কোনো কথা না বলে নিচের HTML ট্যাগটি দেবে:
+   <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
+"""
+
+def get_ai_response(prompt, base64_image=None):
     final_prompt = prompt
 
-    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 (max_tokens=700) দিয়ে ছবির লেখা পড়ে নেওয়া হবে
+    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির সব লেখা ও প্রশ্ন নিখুঁতভাবে পড়ে নেওয়া হবে
     if base64_image:
         try:
             vision_response = client.chat.completions.create(
@@ -52,7 +99,7 @@ def get_ai_response(system_instruction, prompt, base64_image=None):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Extract and list all the text, syllabus topics, or questions from this image concisely."
+                                "text": "Read this image carefully and transcribe all the text, syllabus topics, headings, and questions completely and accurately."
                             },
                             {
                                 "type": "image_url",
@@ -64,14 +111,24 @@ def get_ai_response(system_instruction, prompt, base64_image=None):
                     }
                 ],
                 temperature=0.2,
-                max_tokens=700  # ১০০০ OTPM লিমিটের নিচে রাখা হয়েছে যাতে 429 এরর না আসে
+                max_tokens=750  # ১০০০ টোকেন লিমিটের নিচে রাখা হয়েছে যাতে 429 এরর না আসে
             )
             extracted_image_text = vision_response.choices[0].message.content
-            final_prompt = f"ছবি থেকে পাওয়া লেখা/প্রশ্নসমূহ:\n{extracted_image_text}\n\nইউজারের নির্দেশ: {prompt}\n(উপরের বিষয়বস্তু অনুযায়ী বিস্তারিত ও পয়েন্ট আকারে বাংলায় নোটস বা উত্তর দাও।)"
+            
+            # এখানে টেক্সট মডেলকে স্পষ্ট বলে দেওয়া হচ্ছে যাতে সে কখনোই না বলে যে সে ছবি দেখতে পাচ্ছে না
+            final_prompt = f"""ইউজার একটি সিলেবাস বা প্রশ্নপত্রের ছবি আপলোড করেছে। ছবিটির ভেতরে নিচের লেখাগুলো রয়েছে:
+
+--- ছবির ভেতরের লেখা ---
+{extracted_image_text}
+-------------------------
+
+ইউজারের নির্দেশ: "{prompt}"
+
+বিশেষ নির্দেশ: তুমি কখনোই বলবে না যে "আমি সরাসরি ছবিটি দেখতে পাচ্ছি না" বা "টেক্সটটি লিখে দিন"—কারণ ছবির সব লেখা ওপরে তোমাকে দেওয়া হয়েছে। ওপরের লেখাগুলোর প্রতিটি টপিক বা প্রশ্নের জন্য ১, ২ করে পয়েন্ট দিয়ে, • <u><b>বৈশিষ্ট্য:</b></u> এভাবে আন্ডারলাইন করে এবং প্রয়োজনে পার্থক্যের টেবিল বানিয়ে অত্যন্ত সুন্দর ও বিস্তারিত বাংলা নোটস তৈরি করে দাও।"""
         except Exception as e:
             raise Exception(f"Vision Model Error: {str(e)}")
 
-    # ২. মূল উত্তর ও বড় বাংলা নোটস তৈরি করবে OpenAI GPT-OSS-120B মডেল
+    # ২. মূল উত্তর ও গোছানো বাংলা নোটস তৈরি করবে OpenAI GPT-OSS-120B মডেল
     text_models = [
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b",
@@ -81,19 +138,20 @@ def get_ai_response(system_instruction, prompt, base64_image=None):
     last_error = None
     for model_name in text_models:
         try:
-            # যদি ব্যাকআপ হিসেবে qwen চলে তবে max_tokens=700 থাকবে, আর openai মডেলে বড় উত্তর আসবে
             kwargs = {
                 "model": model_name,
                 "messages": [
-                    {"role": "system", "content": system_instruction},
+                    {"role": "system", "content": SYSTEM_INSTRUCTION},
                     {"role": "user", "content": final_prompt}
-                ]
+                ],
+                "temperature": 0.4
             }
             if "qwen" in model_name:
-                kwargs["max_tokens"] = 700
+                kwargs["max_tokens"] = 750
 
             response = client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
+            raw_reply = response.choices[0].message.content
+            return clean_and_format_response(raw_reply)
         except Exception as e:
             last_error = e
             continue
@@ -247,16 +305,6 @@ def chat():
     img_url = None
     base64_image = None
     
-    system_instruction = """
-    তুমি একজন স্মার্ট এআই শিক্ষক ও নোটস মেকার। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের সিলেবাস, লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
-    ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
-    তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
-    <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
-    
-    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
-    """
-    
     # ফাইল এবং ছবি আপলোডের লজিক
     if file:
         os.makedirs('static/uploads', exist_ok=True)
@@ -281,7 +329,7 @@ def chat():
             prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
 
     try:
-        ai_response = get_ai_response(system_instruction, prompt, base64_image=base64_image)
+        ai_response = get_ai_response(prompt, base64_image=base64_image)
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
@@ -313,16 +361,6 @@ def edit_chat():
     session_id = request.form.get('session_id')
     msg_id = request.form.get('msg_id')
     
-    system_instruction = """
-    তুমি একজন স্মার্ট এআই শিক্ষক ও নোটস মেকার। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের সিলেবাস, লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
-    ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
-    তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
-    <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
-    
-    * ENGLISH_PROMPT এর জায়গায় ইউজারের চাওয়া ছবিটির একটি সুন্দর ও বিস্তারিত ইংরেজি ডেসক্রিপশন লিখবে এবং শব্দের মাঝখানের স্পেসের বদলে %20 ব্যবহার করবে।
-    """
-    
     try:
         base64_image = None
         doc_ref = None
@@ -338,7 +376,21 @@ def edit_chat():
                     if os.path.exists(potential_path):
                         base64_image = encode_image(potential_path)
 
-        ai_response = get_ai_response(system_instruction, prompt, base64_image=base64_image)
+        # যদি আগের কোনো পুরনো মেসেজে (যেখানে ছবি সেভ হয়নি) ইউজার পেন্সিল আইকন চাপে, তবে সেশনের শেষ ছবিটি খুঁজে নেবে
+        if not base64_image and session_id and session_id != "None":
+            recent_msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5).stream()
+            for m in recent_msgs:
+                m_data = m.to_dict()
+                if m_data.get('img_b64'):
+                    base64_image = m_data.get('img_b64')
+                    break
+                elif m_data.get('img_url'):
+                    potential_path = m_data.get('img_url').lstrip('/')
+                    if os.path.exists(potential_path):
+                        base64_image = encode_image(potential_path)
+                        break
+
+        ai_response = get_ai_response(prompt, base64_image=base64_image)
         
         if doc_ref and doc_ref.get().exists:
             doc_ref.update({
