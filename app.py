@@ -39,16 +39,15 @@ def encode_image(image_path):
         return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 def get_ai_response(system_instruction, prompt, base64_image=None):
-    # ১. যদি মেসেজে ছবি থাকে -> সরাসরি Vision Model ছবি দেখে উত্তর দেবে
+    # ১. যদি মেসেজে ছবি থাকে -> Groq-এর বর্তমান অ্যাক্টিভ Vision Model (qwen/qwen3.8-27b) কাজ করবে
     if base64_image:
         vision_models = [
-            "meta-llama/llama-4-scout-17b-16e-instruct",
-            "meta-llama/llama-4-maverick-17b-128e-instruct"
+            "qwen/qwen3.8-27b"
         ]
         try:
             available_models = [m.id for m in client.models.list().data]
             for m_id in available_models:
-                if any(k in m_id.lower() for k in ["scout", "maverick", "vision", "pixtral", "llama-4"]):
+                if any(k in m_id.lower() for k in ["qwen", "vision", "pixtral"]):
                     if m_id not in vision_models:
                         vision_models.append(m_id)
         except Exception:
@@ -57,7 +56,7 @@ def get_ai_response(system_instruction, prompt, base64_image=None):
         vision_prompt = f"""{system_instruction}
 
 ইউজারের নির্দেশ: {prompt}
-(বিশেষ নির্দেশ: এই ছবিতে যে লেখা, সিলেবাস বা প্রশ্নগুলো দেওয়া আছে তা খুব মনোযোগ দিয়ে পড়ো এবং ইউজারের নির্দেশ অনুযায়ী পয়েন্ট করে বিস্তারিত বাংলায় নোটস বা উত্তর তৈরি করে দাও। ভুলেও বলবে না যে তুমি ছবি দেখতে পাচ্ছ না।)"""
+(বিশেষ নির্দেশ: এই ছবিতে যে লেখা, সিলেবাস বা প্রশ্নগুলো দেওয়া আছে তা খুব মনোযোগ দিয়ে পড়ো এবং ইউজারের নির্দেশ অনুযায়ী পয়েন্ট করে বিস্তারিত ও স্পষ্ট বাংলায় নোটস বা উত্তর তৈরি করে দাও।)"""
 
         last_error = None
         for model_name in vision_models:
@@ -87,11 +86,12 @@ def get_ai_response(system_instruction, prompt, base64_image=None):
                 continue
         raise Exception(f"Vision Model Error: {str(last_error)}")
 
-    # ২. যদি শুধু টেক্সট মেসেজ হয় -> Groq-এর OpenAI মডেল উত্তর দেবে
+    # ২. যদি শুধু টেক্সট মেসেজ হয় -> Groq-এর OpenAI মডেল (openai/gpt-oss-120b) উত্তর দেবে
     else:
         text_models = [
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant"
         ]
@@ -307,7 +307,7 @@ def chat():
         if img_url:
             chat_data['img_url'] = img_url
         if base64_image:
-            chat_data['img_b64'] = base64_image # ডেটাবেসে সেভ রাখা হচ্ছে যাতে Edit করলেও ছবি না হারায়
+            chat_data['img_b64'] = base64_image
             
         update_time, doc_ref = session_ref.collection('messages').add(chat_data)
         
