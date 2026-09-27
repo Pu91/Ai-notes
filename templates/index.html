@@ -47,8 +47,25 @@
         
         .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
         
-        #input-container { flex: 0 0 auto; padding: 15px; background: #fff; }
-        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; box-sizing: border-box; }
+        #input-container { flex: 0 0 auto; padding: 10px 15px 15px 15px; background: #fff; border-top: 1px solid #f0f0f0; }
+        
+        /* === SUBJECT, COURSE & LANGUAGE SELECTOR STYLES === */
+        .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 8px auto; box-sizing: border-box; }
+        .selector-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
+        .select-btn:hover { background: #eef7fa; }
+        
+        /* Scrollable Dropdown List (Niche theke opore uthbe) */
+        .dropdown-menu-list { display: none; position: absolute; bottom: 42px; left: 0; width: 235px; max-height: 200px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 1500; padding: 6px 0; }
+        .dropdown-item-opt { padding: 10px 15px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
+        
+        /* Message Box-er opore Arrow Badge */
+        .selected-tag-box { display: none; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 5px 12px; border-radius: 18px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
+        .close-tag-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 13px; line-height: 18px; text-align: center; cursor: pointer; margin-left: 4px; font-weight: bold; }
+        .lock-warning { font-size: 12px; color: #d93025; margin-top: 4px; padding-left: 4px; font-weight: 500; }
+
+        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; box-sizing: border-box; transition: opacity 0.2s; }
         .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px 10px; color: #666; }
         #prompt { flex-grow: 1; border: none; outline: none; background: transparent; padding: 10px; font-size: 16px; resize: none; max-height: 100px; height: 24px; }
         .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;}
@@ -143,6 +160,64 @@
         </div>
 
         <div id="input-container">
+            <!-- === 3-STEP SELECTOR: SUBJECT ➔ HONOURS/GENERAL ➔ LANGUAGE === -->
+            <div class="selector-wrapper">
+                <!-- 1. Subject List (Scrollable) -->
+                <div id="subjectDropdown" class="dropdown-menu-list">
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
+                </div>
+
+                <!-- 2. Honours / General List -->
+                <div id="courseDropdown" class="dropdown-menu-list">
+                    <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours (অনার্স) <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC (জেনারেল) <span>➔</span></div>
+                </div>
+
+                <!-- 3. Language List (Bengali / English) -->
+                <div id="langDropdown" class="dropdown-menu-list">
+                    <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali (বাংলা) <span>✓</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English (ইংরেজি) <span>✓</span></div>
+                </div>
+
+                <!-- Buttons & Active Selection Badge -->
+                <div class="selector-bar">
+                    <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
+                        📚 Subject Select করুন <span>▾</span>
+                    </button>
+
+                    <button type="button" id="courseTypeBtn" class="select-btn" style="display:none;" onclick="toggleCourseList()">
+                        🎓 Honours / General <span>▾</span>
+                    </button>
+
+                    <button type="button" id="langTypeBtn" class="select-btn" style="display:none;" onclick="toggleLangList()">
+                        🗣️ ভাষা (Bengali / English) <span>▾</span>
+                    </button>
+
+                    <!-- Message Box-er opore Arrow Badge -->
+                    <div id="selectedBadge" class="selected-tag-box">
+                        <span id="badgeText"></span>
+                        <button type="button" class="close-tag-btn" onclick="resetSelection()" title="Close">×</button>
+                    </div>
+                </div>
+
+                <div id="lockNotice" class="lock-warning">
+                    ⚠️ মেসেজ দেওয়ার আগে ওপরের বাটন থেকে <b>Subject ➔ Honours/General ➔ ভাষা</b> সিলেক্ট করুন।
+                </div>
+            </div>
+
             <div id="image-preview-container" style="display: none; position: relative; margin-bottom: 15px; width: fit-content; padding-left: 15px;">
                 <img id="image-preview" src="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #0D8ABC;">
                 <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
@@ -150,7 +225,7 @@
             
             <div id="form-wrapper">
                 <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
-                <button class="attach-btn" type="button" onclick="document.getElementById('file_input').click()">📎</button>
+                <button class="attach-btn" id="attach-btn" type="button" onclick="document.getElementById('file_input').click()">📎</button>
                 <textarea id="prompt" placeholder="Message AI Notes..."></textarea>
                 <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()">↑</button>
             </div>
@@ -161,6 +236,131 @@
         const chatBox = document.getElementById('chat-box');
         chatBox.scrollTop = chatBox.scrollHeight;
         let currentSessionId = "{{ current_session }}"; 
+
+        // === 3-STEP SELECTION & LOCK LOGIC ===
+        let selectedSubject = localStorage.getItem('ai_subject') || "";
+        let selectedCourse = localStorage.getItem('ai_course') || "";
+        let selectedLang = localStorage.getItem('ai_lang') || "";
+
+        function closeAllDropdowns() {
+            document.getElementById("subjectDropdown").style.display = "none";
+            document.getElementById("courseDropdown").style.display = "none";
+            document.getElementById("langDropdown").style.display = "none";
+        }
+
+        function toggleSubjectList() {
+            const el = document.getElementById("subjectDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function toggleCourseList() {
+            const el = document.getElementById("courseDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function toggleLangList() {
+            const el = document.getElementById("langDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function chooseSubject(sub) {
+            selectedSubject = sub;
+            selectedCourse = "";
+            selectedLang = "";
+            closeAllDropdowns();
+
+            document.getElementById("mainSubjectBtn").style.display = "none";
+            document.getElementById("selectedBadge").style.display = "inline-flex";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Honours/General নিন)</span>`;
+
+            document.getElementById("courseTypeBtn").style.display = "inline-flex";
+            document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("courseDropdown").style.display = "block";
+            updateLockState();
+        }
+
+        function chooseCourse(course) {
+            selectedCourse = course;
+            selectedLang = "";
+            closeAllDropdowns();
+
+            document.getElementById("courseTypeBtn").style.display = "none";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ <span style="color:#d97706;">(ভাষা নিন)</span>`;
+
+            document.getElementById("langTypeBtn").style.display = "inline-flex";
+            document.getElementById("langDropdown").style.display = "block";
+            updateLockState();
+        }
+
+        function chooseLanguage(lang) {
+            selectedLang = lang;
+            closeAllDropdowns();
+
+            document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang}`;
+
+            localStorage.setItem('ai_subject', selectedSubject);
+            localStorage.setItem('ai_course', selectedCourse);
+            localStorage.setItem('ai_lang', selectedLang);
+            updateLockState();
+        }
+
+        function resetSelection() {
+            selectedSubject = "";
+            selectedCourse = "";
+            selectedLang = "";
+            localStorage.removeItem('ai_subject');
+            localStorage.removeItem('ai_course');
+            localStorage.removeItem('ai_lang');
+
+            closeAllDropdowns();
+            document.getElementById("selectedBadge").style.display = "none";
+            document.getElementById("courseTypeBtn").style.display = "none";
+            document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("mainSubjectBtn").style.display = "inline-flex";
+            updateLockState();
+        }
+
+        function updateLockState() {
+            const promptInput = document.getElementById("prompt");
+            const sendBtn = document.getElementById("send-btn");
+            const attachBtn = document.getElementById("attach-btn");
+            const formWrapper = document.getElementById("form-wrapper");
+            const lockNotice = document.getElementById("lockNotice");
+
+            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "");
+
+            promptInput.disabled = !isUnlocked;
+            sendBtn.disabled = !isUnlocked;
+            attachBtn.disabled = !isUnlocked;
+
+            if (isUnlocked) {
+                promptInput.placeholder = `${selectedSubject} (${selectedCourse} - ${selectedLang}) এর সিলেবাস বা প্রশ্ন দিন...`;
+                formWrapper.style.opacity = "1";
+                sendBtn.style.opacity = "1";
+                lockNotice.style.display = "none";
+            } else {
+                promptInput.placeholder = "আগে ওপরে Subject ➔ Honours/General ➔ ভাষা সিলেক্ট করুন...";
+                formWrapper.style.opacity = "0.6";
+                sendBtn.style.opacity = "0.4";
+                lockNotice.style.display = "block";
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            if (selectedSubject && selectedCourse && selectedLang) {
+                document.getElementById("mainSubjectBtn").style.display = "none";
+                document.getElementById("selectedBadge").style.display = "inline-flex";
+                document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang}`;
+            }
+            updateLockState();
+        });
 
         // Get Current Time nicely formatted
         function getCurrentTime() {
@@ -312,8 +512,13 @@
             botMsgContent.style.color = "#666";
             botMsgContent.style.fontStyle = "italic";
             
+            let fullPrompt = newText;
+            if (selectedSubject && selectedCourse && selectedLang && !newText.startsWith("[Subject:")) {
+                fullPrompt = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang}] ${newText}`;
+            }
+
             const formData = new FormData();
-            formData.append('prompt', newText);
+            formData.append('prompt', fullPrompt);
             formData.append('session_id', currentSessionId);
             formData.append('msg_id', msgId);
 
@@ -336,6 +541,11 @@
         }
 
         async function sendMessage() {
+            if (!selectedSubject || !selectedCourse || !selectedLang) {
+                alert("দয়া করে আগে Subject ➔ Honours/General ➔ ভাষা সিলেক্ট করুন!");
+                return;
+            }
+
             const promptInput = document.getElementById('prompt');
             const fileInput = document.getElementById('file_input');
             const sendBtn = document.getElementById('send-btn');
@@ -344,8 +554,11 @@
             const file = fileInput.files[0];
             if (!prompt && !file) return;
 
+            const displayPrompt = `[${selectedSubject} ➔ ${selectedCourse} ➔ ${selectedLang}] ${prompt}`;
+            const fullPromptForAI = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang}] ${prompt}`;
+
             const tempId = "temp-" + Date.now();
-            appendUserMessage(prompt, file, tempId);
+            appendUserMessage(displayPrompt, file, tempId);
             
             promptInput.value = '';
             clearImagePreview();
@@ -356,7 +569,7 @@
             showTypingIndicator(tempId);
 
             const formData = new FormData();
-            formData.append('prompt', prompt);
+            formData.append('prompt', fullPromptForAI);
             formData.append('session_id', currentSessionId);
             if (file) formData.append('file', file);
 
@@ -382,7 +595,7 @@
                     document.getElementById(`bot-row-${tempId}`).id = `bot-row-${data.msg_id}`;
                     
                     botMsgFooter.id = `footer-${data.msg_id}`;
-                    botMsgFooter.style.display = "flex"; // Show footer icons
+                    botMsgFooter.style.display = "flex";
                     
                     botMsgContent.innerHTML = data.response.replace(/\n/g, '<br>');
                     botMsgContent.style.color = "inherit";
