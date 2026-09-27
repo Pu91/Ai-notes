@@ -3,12 +3,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from groq import Groq
 import os
 import io
-import json
 import uuid
 import random
 import smtplib
 import base64
-import urllib.request
 from PIL import Image
 import PyPDF2
 from email.mime.text import MIMEText
@@ -30,111 +28,88 @@ db = firestore.client()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
-# ছবিকে রিসাইজ ও কমপ্রেস করে Base64-এ রূপান্তর করার ফাংশন
+# ছবির ছোট লেখাগুলো যাতে পরিষ্কার থাকে তাই হাই-রেজোলিউশনে (1600px) Base64 করার ফাংশন
 def encode_image(image_path):
     with Image.open(image_path) as img:
         if img.mode != 'RGB':
             img = img.convert('RGB')
-        img.thumbnail((1024, 1024))
+        img.thumbnail((1600, 1600))
         buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=85)
+        img.save(buffer, format="JPEG", quality=92)
         return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-# ছবির ভেতরের লেখা বা প্রশ্ন পড়ার ফাংশন
-def extract_text_from_image(base64_image):
-    ocr_prompt = "Read and transcribe all the text and questions from this image accurately as it is."
-    
-    # Groq-এর চালু থাকা ভিশন মডেল খুঁজে বের করা
-    vision_models = [
-        "meta-llama/llama-4-scout-17b-16e-instruct",
-        "meta-llama/llama-4-maverick-17b-128e-instruct"
-    ]
-    try:
-        available_models = [m.id for m in client.models.list().data]
-        for m_id in available_models:
-            if any(k in m_id.lower() for k in ["scout", "maverick", "vision", "llama-4"]):
-                if m_id not in vision_models:
-                    vision_models.append(m_id)
-    except Exception:
-        pass
-
-    for model_name in vision_models:
-        try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": ocr_prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
-                            }
-                        ]
-                    }
-                ]
-            )
-            return response.choices[0].message.content
-        except Exception:
-            continue
-
-    # ব্যাকআপ OpenAI Vision এপিআই (যদি Groq ভিশন মডেল রেসপন্স না করে)
-    payload = json.dumps({
-        "model": "openai",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": ocr_prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                ]
-            }
+def get_ai_response(system_instruction, prompt, base64_image=None):
+    # ১. যদি মেসেজে ছবি থাকে -> সরাসরি Vision Model ছবি দেখে উত্তর দেবে
+    if base64_image:
+        vision_models = [
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "meta-llama/llama-4-maverick-17b-128e-instruct"
         ]
-    }).encode('utf-8')
-    req = urllib.request.Request(
-        "https://text.pollinations.ai/openai",
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
-    )
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        res_data = json.loads(resp.read().decode('utf-8'))
-        return res_data['choices'][0]['message']['content']
-
-# Groq-এর OpenAI মডেল দিয়ে মূল উত্তর তৈরি করার ফাংশন
-def get_ai_response(system_instruction, prompt, image_path=None):
-    final_prompt = prompt
-
-    # যদি ছবি আপলোড করা হয়, আগে ছবির লেখাগুলো পড়ে নেওয়া হবে
-    if image_path and os.path.exists(image_path):
-        base64_image = encode_image(image_path)
-        extracted_text = extract_text_from_image(base64_image)
-        final_prompt = f"ছবির ভেতরের লেখা/প্রশ্নসমূহ:\n{extracted_text}\n\nইউজারের নির্দেশ: {prompt}\n(উপরের ছবির প্রশ্ন বা বিষয়বস্তুর ওপর ভিত্তি করে পয়েন্ট করে বাংলায় বিস্তারিত উত্তর বা নোটস দাও।)"
-
-    # Groq-এর OpenAI মডেলগুলো সবার ওপরে রাখা হয়েছে
-    openai_and_fallback_models = [
-        "openai/gpt-oss-120b",
-        "openai/gpt-oss-20b",
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant"
-    ]
-    
-    last_error = None
-    for model_name in openai_and_fallback_models:
         try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": final_prompt}
-                ]
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            last_error = e
-            continue
-            
-    raise last_error
+            available_models = [m.id for m in client.models.list().data]
+            for m_id in available_models:
+                if any(k in m_id.lower() for k in ["scout", "maverick", "vision", "pixtral", "llama-4"]):
+                    if m_id not in vision_models:
+                        vision_models.append(m_id)
+        except Exception:
+            pass
+
+        vision_prompt = f"""{system_instruction}
+
+ইউজারের নির্দেশ: {prompt}
+(বিশেষ নির্দেশ: এই ছবিতে যে লেখা, সিলেবাস বা প্রশ্নগুলো দেওয়া আছে তা খুব মনোযোগ দিয়ে পড়ো এবং ইউজারের নির্দেশ অনুযায়ী পয়েন্ট করে বিস্তারিত বাংলায় নোটস বা উত্তর তৈরি করে দাও। ভুলেও বলবে না যে তুমি ছবি দেখতে পাচ্ছ না।)"""
+
+        last_error = None
+        for model_name in vision_models:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": vision_prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    temperature=0.3,
+                    max_tokens=4000
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                last_error = e
+                continue
+        raise Exception(f"Vision Model Error: {str(last_error)}")
+
+    # ২. যদি শুধু টেক্সট মেসেজ হয় -> Groq-এর OpenAI মডেল উত্তর দেবে
+    else:
+        text_models = [
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant"
+        ]
+        last_error = None
+        for model_name in text_models:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                last_error = e
+                continue
+        raise last_error
 
 # --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
@@ -281,11 +256,11 @@ def chat():
     if not session_id or session_id == "None": session_id = str(uuid.uuid4())
     
     img_url = None
-    saved_filepath = None
+    base64_image = None
     
     system_instruction = """
-    তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
+    তুমি একজন স্মার্ট এআই শিক্ষক ও নোটস মেকার। 
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের সিলেবাস, লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -311,17 +286,17 @@ def chat():
                 pass
         else:
             img_url = '/' + filepath
-            saved_filepath = filepath
+            base64_image = encode_image(filepath)
         
         if not prompt:
-            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর তৈরি করে দাও।"
+            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
 
     try:
-        ai_response = get_ai_response(system_instruction, prompt, image_path=saved_filepath)
+        ai_response = get_ai_response(system_instruction, prompt, base64_image=base64_image)
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
-            title = prompt[:25] + "..." if prompt else "Image Upload..."
+            title = prompt[:25] + "..." if prompt else "Image Notes..."
             session_ref.set({'title': title, 'created_at': firestore.SERVER_TIMESTAMP})
         
         chat_data = {
@@ -331,6 +306,8 @@ def chat():
         }
         if img_url:
             chat_data['img_url'] = img_url
+        if base64_image:
+            chat_data['img_b64'] = base64_image # ডেটাবেসে সেভ রাখা হচ্ছে যাতে Edit করলেও ছবি না হারায়
             
         update_time, doc_ref = session_ref.collection('messages').add(chat_data)
         
@@ -348,8 +325,8 @@ def edit_chat():
     msg_id = request.form.get('msg_id')
     
     system_instruction = """
-    তুমি একজন স্মার্ট এআই। 
-    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
+    তুমি একজন স্মার্ট এআই শিক্ষক ও নোটস মেকার। 
+    ১. সাধারণ প্রশ্নের উত্তর এবং ছবির ভেতরের সিলেবাস, লেখা বা প্রশ্নের উত্তর পয়েন্ট করে গুছিয়ে স্পষ্ট বাংলায় দেবে।
     ২. কিন্তু যদি ইউজার কোনো ছবি তৈরি করতে বা আঁকতে বলে (যেমন: "একটি কুকুরের ছবি দাও", "Generate an image", "create a picture"), 
     তাহলে তুমি কোনো ব্যাখ্যামূলক কথা না বলে শুধু নিচের HTML ট্যাগটি উত্তর হিসেবে দেবে:
     <img src="https://image.pollinations.ai/prompt/ENGLISH_PROMPT?width=600&height=600&nologo=true" style="width:100%; max-width:350px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.15); cursor:pointer;" onclick="openModal(this.src)">
@@ -358,20 +335,21 @@ def edit_chat():
     """
     
     try:
-        saved_filepath = None
+        base64_image = None
         doc_ref = None
         
         if session_id and session_id != "None" and msg_id and not str(msg_id).startswith('temp-'):
             doc_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id)
             doc_snap = doc_ref.get()
             if doc_snap.exists:
-                img_url = doc_snap.to_dict().get('img_url')
-                if img_url:
-                    potential_path = img_url.lstrip('/')
+                doc_data = doc_snap.to_dict()
+                base64_image = doc_data.get('img_b64')
+                if not base64_image and doc_data.get('img_url'):
+                    potential_path = doc_data.get('img_url').lstrip('/')
                     if os.path.exists(potential_path):
-                        saved_filepath = potential_path
+                        base64_image = encode_image(potential_path)
 
-        ai_response = get_ai_response(system_instruction, prompt, image_path=saved_filepath)
+        ai_response = get_ai_response(system_instruction, prompt, base64_image=base64_image)
         
         if doc_ref and doc_ref.get().exists:
             doc_ref.update({
