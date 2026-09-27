@@ -55,20 +55,102 @@
         .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
         .select-btn:hover { background: #eef7fa; }
         
-        /* Scrollable Dropdown List (Niche theke opore uthbe) */
-        .dropdown-menu-list { display: none; position: absolute; bottom: 42px; left: 0; width: 235px; max-height: 200px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 1500; padding: 6px 0; }
+        /* Scrollable Dropdown List */
+        .dropdown-menu-list { display: none; position: absolute; bottom: 42px; left: 0; width: 250px; max-height: 210px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 1500; padding: 6px 0; }
         .dropdown-item-opt { padding: 10px 15px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
         
-        /* Message Box-er opore Arrow Badge */
+        /* Arrow Badge above Message Box */
         .selected-tag-box { display: none; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 5px 12px; border-radius: 18px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
         .close-tag-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 13px; line-height: 18px; text-align: center; cursor: pointer; margin-left: 4px; font-weight: bold; }
-        .lock-warning { font-size: 12px; color: #d93025; margin-top: 4px; padding-left: 4px; font-weight: 500; }
+        .lock-warning { font-size: 12px; color: #d93025; margin-top: 5px; padding-left: 4px; font-weight: 600; }
 
-        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; box-sizing: border-box; transition: opacity 0.2s; }
-        .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px 10px; color: #666; }
-        #prompt { flex-grow: 1; border: none; outline: none; background: transparent; padding: 10px; font-size: 16px; resize: none; max-height: 100px; height: 24px; }
-        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;}
+        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 8px 12px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; transition: opacity 0.2s; }
+        .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px 8px; color: #666; }
+        #prompt { flex-grow: 1; border: none; outline: none; background: transparent; padding: 10px 6px; font-size: 15px; resize: none; max-height: 100px; height: 24px; }
+        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; transition: 0.2s;}
+
+        /* === ROUND VOICE ANIMATION BUTTON === */
+        .voice-anim-btn {
+            background: linear-gradient(135deg, #0D8ABC, #2563eb);
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+            position: relative;
+        }
+        .voice-bar {
+            width: 2.5px;
+            background: #ffffff;
+            border-radius: 2px;
+            animation: voiceWave 1.1s infinite ease-in-out;
+        }
+        .voice-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+        .voice-bar:nth-child(2) { height: 15px; animation-delay: 0.2s; }
+        .voice-bar:nth-child(3) { height: 11px; animation-delay: 0.4s; }
+        .voice-bar:nth-child(4) { height: 14px; animation-delay: 0.1s; }
+        @keyframes voiceWave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1.25); }
+        }
+
+        /* === FULL SCREEN VOICE PAGE OVERLAY === */
+        #voice-page-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #0f172a, #020617);
+            z-index: 3000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            color: #ffffff;
+        }
+        .voice-orb-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: auto 0;
+        }
+        .voice-orb {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #2563eb, #ec4899);
+            box-shadow: 0 0 50px rgba(56, 189, 248, 0.6);
+            animation: orbPulse 2s infinite ease-in-out;
+        }
+        @keyframes orbPulse {
+            0%, 100% { transform: scale(0.92); box-shadow: 0 0 35px rgba(56, 189, 248, 0.5); }
+            50% { transform: scale(1.08); box-shadow: 0 0 75px rgba(236, 72, 153, 0.7); }
+        }
+        .close-voice-page {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 52px;
+            height: 52px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
         
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .btn-spinner { border: 2px solid transparent; border-top: 2px solid #fff; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
@@ -79,9 +161,22 @@
     </style>
 </head>
 <body>
+    <!-- Image Zoom Modal -->
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="">
     </div>
+
+    <!-- === VOICE PAGE MODAL (Placeholder for future Voice Assistant) === -->
+    <div id="voice-page-modal">
+        <div style="font-size: 16px; font-weight: 600; opacity: 0.85;">AI Notes Voice Mode</div>
+        <div class="voice-orb-container">
+            <div class="voice-orb"></div>
+            <p style="margin-top: 30px; font-size: 18px; font-weight: 500; color: #e2e8f0;">Listening...</p>
+            <span style="font-size: 13px; color: #94a3b8; margin-top: 4px;">(Voice conversation feature coming soon)</span>
+        </div>
+        <button class="close-voice-page" onclick="closeVoicePage()" title="Close Voice Mode">×</button>
+    </div>
+
     <div id="overlay" onclick="toggleSidebar()"></div>
     
     <div id="sidebar">
@@ -162,40 +257,43 @@
         <div id="input-container">
             <!-- === 3-STEP SELECTOR: SUBJECT ➔ HONOURS/GENERAL ➔ LANGUAGE === -->
             <div class="selector-wrapper">
-                <!-- 1. Subject List (Scrollable) -->
+                <!-- 1. Subject List (Scrollable & Filterable by typing) -->
                 <div id="subjectDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Zoology" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Botany" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Biochemistry" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Chemistry" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Physics" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Physiology" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Mathematics" onclick="chooseSubject('Mathematics')">📐 Mathematics <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Computer Science" onclick="chooseSubject('Computer Science')">💻 Computer Science <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="History" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Geography" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Political Science" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Philosophy" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Education" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Sanskrit" onclick="chooseSubject('Sanskrit')">📜 Sanskrit <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Bengali" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="English" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
+                    <div class="dropdown-item-opt subject-opt" data-name="Environmental Science" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
                 </div>
 
                 <!-- 2. Honours / General List -->
                 <div id="courseDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours (অনার্স) <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC (জেনারেল) <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC <span>➔</span></div>
                 </div>
 
                 <!-- 3. Language List (Bengali / English) -->
                 <div id="langDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali (বাংলা) <span>✓</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English (ইংরেজি) <span>✓</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>✓</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>✓</span></div>
                 </div>
 
                 <!-- Buttons & Active Selection Badge -->
                 <div class="selector-bar">
                     <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
-                        📚 Subject Select করুন <span>▾</span>
+                        📚 Select Subject <span>▾</span>
                     </button>
 
                     <button type="button" id="courseTypeBtn" class="select-btn" style="display:none;" onclick="toggleCourseList()">
@@ -203,18 +301,18 @@
                     </button>
 
                     <button type="button" id="langTypeBtn" class="select-btn" style="display:none;" onclick="toggleLangList()">
-                        🗣️ ভাষা (Bengali / English) <span>▾</span>
+                        🗣️ Language (Bengali / English) <span>▾</span>
                     </button>
 
-                    <!-- Message Box-er opore Arrow Badge -->
+                    <!-- Arrow Badge above Message Box -->
                     <div id="selectedBadge" class="selected-tag-box">
                         <span id="badgeText"></span>
-                        <button type="button" class="close-tag-btn" onclick="resetSelection()" title="Close">×</button>
+                        <button type="button" class="close-tag-btn" onclick="resetSelection()" title="Remove Selection">×</button>
                     </div>
                 </div>
 
                 <div id="lockNotice" class="lock-warning">
-                    ⚠️ মেসেজ দেওয়ার আগে ওপরের বাটন থেকে <b>Subject ➔ Honours/General ➔ ভাষা</b> সিলেক্ট করুন।
+                    ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language</b> (or type subject name below) before sending a message.
                 </div>
             </div>
 
@@ -225,9 +323,19 @@
             
             <div id="form-wrapper">
                 <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
-                <button class="attach-btn" id="attach-btn" type="button" onclick="document.getElementById('file_input').click()">📎</button>
-                <textarea id="prompt" placeholder="Message AI Notes..."></textarea>
-                <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()">↑</button>
+                <button class="attach-btn" id="attach-btn" type="button" onclick="handleAttachClick()">📎</button>
+                <textarea id="prompt" placeholder="Type subject name (e.g. Zoology) or select above..." oninput="handlePromptTyping(this.value)"></textarea>
+                
+                <!-- Send Button -->
+                <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()" title="Send Message">↑</button>
+                
+                <!-- Round Voice Animation Button -->
+                <button class="voice-anim-btn" id="voice-btn" type="button" onclick="openVoicePage()" title="Open Voice Mode">
+                    <span class="voice-bar"></span>
+                    <span class="voice-bar"></span>
+                    <span class="voice-bar"></span>
+                    <span class="voice-bar"></span>
+                </button>
             </div>
         </div>
     </div>
@@ -237,7 +345,15 @@
         chatBox.scrollTop = chatBox.scrollHeight;
         let currentSessionId = "{{ current_session }}"; 
 
-        // === 3-STEP SELECTION & LOCK LOGIC ===
+        // === VOICE PAGE FUNCTIONS ===
+        function openVoicePage() {
+            document.getElementById('voice-page-modal').style.display = 'flex';
+        }
+        function closeVoicePage() {
+            document.getElementById('voice-page-modal').style.display = 'none';
+        }
+
+        // === 3-STEP SELECTION & ALPHABET SEARCH LOGIC ===
         let selectedSubject = localStorage.getItem('ai_subject') || "";
         let selectedCourse = localStorage.getItem('ai_course') || "";
         let selectedLang = localStorage.getItem('ai_lang') || "";
@@ -248,10 +364,16 @@
             document.getElementById("langDropdown").style.display = "none";
         }
 
+        function resetSubjectFilter() {
+            const items = document.querySelectorAll('.subject-opt');
+            items.forEach(item => item.style.display = 'flex');
+        }
+
         function toggleSubjectList() {
             const el = document.getElementById("subjectDropdown");
             const isOpen = el.style.display === "block";
             closeAllDropdowns();
+            resetSubjectFilter();
             el.style.display = isOpen ? "none" : "block";
         }
 
@@ -269,15 +391,46 @@
             el.style.display = isOpen ? "none" : "block";
         }
 
+        // Type alphabet in message box to search & filter Subject
+        function handlePromptTyping(val) {
+            const query = val.trim().toLowerCase();
+
+            // If Subject is not selected yet, filter the Subject dropdown as user types alphabets
+            if (!selectedSubject) {
+                const dropdown = document.getElementById("subjectDropdown");
+                const items = document.querySelectorAll('.subject-opt');
+                if (query.length > 0) {
+                    let anyVisible = false;
+                    items.forEach(item => {
+                        const subName = item.getAttribute('data-name').toLowerCase();
+                        if (subName.includes(query)) {
+                            item.style.display = 'flex';
+                            anyVisible = true;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                    dropdown.style.display = anyVisible ? 'block' : 'none';
+                } else {
+                    resetSubjectFilter();
+                    dropdown.style.display = 'none';
+                }
+            }
+        }
+
         function chooseSubject(sub) {
             selectedSubject = sub;
             selectedCourse = "";
             selectedLang = "";
             closeAllDropdowns();
+            resetSubjectFilter();
+
+            // Clear any search letters typed in the message box
+            document.getElementById("prompt").value = "";
 
             document.getElementById("mainSubjectBtn").style.display = "none";
             document.getElementById("selectedBadge").style.display = "inline-flex";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Honours/General নিন)</span>`;
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Select Honours/General)</span>`;
 
             document.getElementById("courseTypeBtn").style.display = "inline-flex";
             document.getElementById("langTypeBtn").style.display = "none";
@@ -290,8 +443,9 @@
             selectedLang = "";
             closeAllDropdowns();
 
+            document.getElementById("prompt").value = "";
             document.getElementById("courseTypeBtn").style.display = "none";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ <span style="color:#d97706;">(ভাষা নিন)</span>`;
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ <span style="color:#d97706;">(Select Language)</span>`;
 
             document.getElementById("langTypeBtn").style.display = "inline-flex";
             document.getElementById("langDropdown").style.display = "block";
@@ -302,6 +456,7 @@
             selectedLang = lang;
             closeAllDropdowns();
 
+            document.getElementById("prompt").value = "";
             document.getElementById("langTypeBtn").style.display = "none";
             document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang}`;
 
@@ -309,6 +464,7 @@
             localStorage.setItem('ai_course', selectedCourse);
             localStorage.setItem('ai_lang', selectedLang);
             updateLockState();
+            document.getElementById("prompt").focus();
         }
 
         function resetSelection() {
@@ -320,6 +476,7 @@
             localStorage.removeItem('ai_lang');
 
             closeAllDropdowns();
+            resetSubjectFilter();
             document.getElementById("selectedBadge").style.display = "none";
             document.getElementById("courseTypeBtn").style.display = "none";
             document.getElementById("langTypeBtn").style.display = "none";
@@ -327,28 +484,40 @@
             updateLockState();
         }
 
+        function handleAttachClick() {
+            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "");
+            if (!isUnlocked) {
+                alert("Please select Subject ➔ Honours/General ➔ Language before uploading a file!");
+                return;
+            }
+            document.getElementById('file_input').click();
+        }
+
         function updateLockState() {
             const promptInput = document.getElementById("prompt");
             const sendBtn = document.getElementById("send-btn");
-            const attachBtn = document.getElementById("attach-btn");
-            const formWrapper = document.getElementById("form-wrapper");
             const lockNotice = document.getElementById("lockNotice");
 
             const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "");
 
-            promptInput.disabled = !isUnlocked;
+            // Send button stays locked until all 3 are selected, but prompt stays enabled for typing subject search
             sendBtn.disabled = !isUnlocked;
-            attachBtn.disabled = !isUnlocked;
 
             if (isUnlocked) {
-                promptInput.placeholder = `${selectedSubject} (${selectedCourse} - ${selectedLang}) এর সিলেবাস বা প্রশ্ন দিন...`;
-                formWrapper.style.opacity = "1";
+                promptInput.placeholder = `Ask or upload syllabus for ${selectedSubject} (${selectedCourse} - ${selectedLang})...`;
                 sendBtn.style.opacity = "1";
+                sendBtn.style.cursor = "pointer";
                 lockNotice.style.display = "none";
             } else {
-                promptInput.placeholder = "আগে ওপরে Subject ➔ Honours/General ➔ ভাষা সিলেক্ট করুন...";
-                formWrapper.style.opacity = "0.6";
-                sendBtn.style.opacity = "0.4";
+                if (!selectedSubject) {
+                    promptInput.placeholder = "Type subject name (e.g. Zoology) or select above...";
+                } else if (!selectedCourse) {
+                    promptInput.placeholder = "Please select Honours or General above...";
+                } else {
+                    promptInput.placeholder = "Please select Language (Bengali / English) above...";
+                }
+                sendBtn.style.opacity = "0.35";
+                sendBtn.style.cursor = "not-allowed";
                 lockNotice.style.display = "block";
             }
         }
@@ -542,7 +711,7 @@
 
         async function sendMessage() {
             if (!selectedSubject || !selectedCourse || !selectedLang) {
-                alert("দয়া করে আগে Subject ➔ Honours/General ➔ ভাষা সিলেক্ট করুন!");
+                alert("Please select Subject ➔ Honours/General ➔ Language before sending a message!");
                 return;
             }
 
