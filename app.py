@@ -28,88 +28,77 @@ db = firestore.client()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
-# ছবির ছোট লেখাগুলো যাতে পরিষ্কার থাকে তাই হাই-রেজোলিউশনে (1600px) Base64 করার ফাংশন
+# ছবিকে পরিষ্কার রেখে অপটিমাইজড Base64 করার ফাংশন
 def encode_image(image_path):
     with Image.open(image_path) as img:
         if img.mode != 'RGB':
             img = img.convert('RGB')
-        img.thumbnail((1600, 1600))
+        img.thumbnail((1200, 1200))
         buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=92)
+        img.save(buffer, format="JPEG", quality=85)
         return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 def get_ai_response(system_instruction, prompt, base64_image=None):
-    # ১. যদি মেসেজে ছবি থাকে -> Groq-এর বর্তমান অ্যাক্টিভ Vision Model (qwen/qwen3.8-27b) কাজ করবে
+    final_prompt = prompt
+
+    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 (max_tokens=700) দিয়ে ছবির লেখা পড়ে নেওয়া হবে
     if base64_image:
-        vision_models = [
-            "qwen/qwen3.8-27b"
-        ]
         try:
-            available_models = [m.id for m in client.models.list().data]
-            for m_id in available_models:
-                if any(k in m_id.lower() for k in ["qwen", "vision", "pixtral"]):
-                    if m_id not in vision_models:
-                        vision_models.append(m_id)
-        except Exception:
-            pass
-
-        vision_prompt = f"""{system_instruction}
-
-ইউজারের নির্দেশ: {prompt}
-(বিশেষ নির্দেশ: এই ছবিতে যে লেখা, সিলেবাস বা প্রশ্নগুলো দেওয়া আছে তা খুব মনোযোগ দিয়ে পড়ো এবং ইউজারের নির্দেশ অনুযায়ী পয়েন্ট করে বিস্তারিত ও স্পষ্ট বাংলায় নোটস বা উত্তর তৈরি করে দাও।)"""
-
-        last_error = None
-        for model_name in vision_models:
-            try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": vision_prompt},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}"
-                                    }
+            vision_response = client.chat.completions.create(
+                model="qwen/qwen3.8-27b",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Extract and list all the text, syllabus topics, or questions from this image concisely."
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
                                 }
-                            ]
-                        }
-                    ],
-                    temperature=0.3,
-                    max_tokens=4000
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                last_error = e
-                continue
-        raise Exception(f"Vision Model Error: {str(last_error)}")
+                            }
+                        ]
+                    }
+                ],
+                temperature=0.2,
+                max_tokens=700  # ১০০০ OTPM লিমিটের নিচে রাখা হয়েছে যাতে 429 এরর না আসে
+            )
+            extracted_image_text = vision_response.choices[0].message.content
+            final_prompt = f"ছবি থেকে পাওয়া লেখা/প্রশ্নসমূহ:\n{extracted_image_text}\n\nইউজারের নির্দেশ: {prompt}\n(উপরের বিষয়বস্তু অনুযায়ী বিস্তারিত ও পয়েন্ট আকারে বাংলায় নোটস বা উত্তর দাও।)"
+        except Exception as e:
+            raise Exception(f"Vision Model Error: {str(e)}")
 
-    # ২. যদি শুধু টেক্সট মেসেজ হয় -> Groq-এর OpenAI মডেল (openai/gpt-oss-120b) উত্তর দেবে
-    else:
-        text_models = [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.8-27b",
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant"
-        ]
-        last_error = None
-        for model_name in text_models:
-            try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                last_error = e
-                continue
-        raise last_error
+    # ২. মূল উত্তর ও বড় বাংলা নোটস তৈরি করবে OpenAI GPT-OSS-120B মডেল
+    text_models = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b"
+    ]
+    
+    last_error = None
+    for model_name in text_models:
+        try:
+            # যদি ব্যাকআপ হিসেবে qwen চলে তবে max_tokens=700 থাকবে, আর openai মডেলে বড় উত্তর আসবে
+            kwargs = {
+                "model": model_name,
+                "messages": [
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": final_prompt}
+                ]
+            }
+            if "qwen" in model_name:
+                kwargs["max_tokens"] = 700
+
+            response = client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content
+        except Exception as e:
+            last_error = e
+            continue
+            
+    raise last_error
 
 # --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
