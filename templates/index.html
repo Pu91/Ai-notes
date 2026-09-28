@@ -12,12 +12,13 @@
             margin: 0;
             padding: 0;
             background-color: #ffffff;
-            color: #333;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #1f2937;
+            font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Noto Sans Bengali, sans-serif;
             overflow: hidden;
             position: fixed;
             top: 0;
             left: 0;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* 1. FIXED TOP HEADER */
@@ -26,13 +27,13 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 58px;
-            border-bottom: 1px solid #e5e5e5;
+            height: 60px;
+            border-bottom: 1px solid #e5e7eb;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 18px;
-            font-weight: bold;
+            padding: 0 20px;
+            font-weight: 700;
             font-size: 18px;
             background: #ffffff;
             z-index: 1000;
@@ -44,11 +45,11 @@
         #sidebar {
             position: fixed;
             top: 0;
-            left: -265px;
-            width: 260px;
+            left: -270px;
+            width: 265px;
             height: 100dvh;
-            background-color: #f9f9f9;
-            border-right: 1px solid #e5e5e5;
+            background-color: #f8fafc;
+            border-right: 1px solid #e5e7eb;
             transition: left 0.3s ease;
             z-index: 2001;
             padding: 20px;
@@ -57,23 +58,23 @@
         }
         #sidebar.open { left: 0; }
         .close-sidebar { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 28px; cursor: pointer; color: #666; }
-        .sidebar-item { padding: 12px; border-radius: 8px; cursor: pointer; font-size: 15px; margin-bottom: 8px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .sidebar-item:hover { background: #e5e5e5; }
-        .active-session { background: #e5e5e5; font-weight: bold; }
+        .sidebar-item { padding: 12px; border-radius: 10px; cursor: pointer; font-size: 15px; margin-bottom: 8px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .sidebar-item:hover { background: #e2e8f0; }
+        .active-session { background: #e2e8f0; font-weight: bold; }
 
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         #overlay.open { display: block; }
 
-        /* 2. FIXED MIDDLE CHAT DISPLAY AREA */
+        /* 2. FIXED MIDDLE CHAT DISPLAY (Balanced Left-Right Gap like Gemini) */
         #chat-box {
             position: fixed;
-            top: 58px;
-            bottom: 135px; /* Automatically adjusted by JS to match footer height */
+            top: 60px;
+            bottom: 165px; /* Dynamically synced by JS */
             left: 0;
             right: 0;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 16px 14px;
+            padding: 22px 22px 28px 22px; /* Equal breathing gap on both sides of screen */
             display: flex;
             flex-direction: column;
             scroll-behavior: smooth;
@@ -81,22 +82,74 @@
             z-index: 1;
         }
 
-        .message-row { display: flex; gap: 10px; margin-bottom: 22px; width: 100%; align-items: flex-start; }
-        .user-row { flex-direction: row-reverse; }
-        .bot-row { flex-direction: row; }
+        .message-row {
+            display: flex;
+            margin: 0 auto 28px auto;
+            width: 100%;
+            max-width: 780px;
+        }
+        .user-row {
+            justify-content: flex-end;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        /* Bot row takes full centered width with balanced side gaps, no one-sided push */
+        .bot-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
 
-        .avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0; }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
+        .bot-header-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 2px;
+        }
+        .bot-header-line img {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+        }
+
         .message { min-width: 0; position: relative; display: flex; flex-direction: column; }
-        .user-msg { max-width: 78%; }
-        .bot-msg { width: calc(100% - 44px); max-width: 800px; }
+        .user-msg { max-width: 82%; }
+        .bot-msg { width: 100%; }
 
-        .msg-content { padding: 12px 15px; border-radius: 12px; line-height: 1.55; font-size: 15px; word-wrap: break-word; overflow-wrap: break-word; }
-        .user-row .msg-content { background-color: #f3f3f3; border-top-right-radius: 4px; }
-        .bot-row .msg-content { background-color: transparent; padding: 4px 0; width: 100%; overflow: hidden; }
-
-        /* Remove any accidental underline inside bot response */
+        /* Gemini-style Typography for Bot & User Messages */
+        .msg-content {
+            font-size: 16px;
+            line-height: 1.75;
+            letter-spacing: 0.15px;
+            color: #1f2937;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .user-row .msg-content {
+            background-color: #f1f5f9;
+            padding: 12px 18px;
+            border-radius: 20px;
+            border-top-right-radius: 4px;
+            font-size: 15.5px;
+            line-height: 1.55;
+            color: #0f172a;
+        }
+        .bot-row .msg-content {
+            background-color: transparent;
+            padding: 4px 2px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .bot-row .msg-content b, .bot-row .msg-content strong {
+            color: #0f172a;
+            font-weight: 700;
+        }
         .bot-row .msg-content u { text-decoration: none !important; }
 
         /* HORIZONTAL SCROLLABLE TABLE BOX */
@@ -105,134 +158,215 @@
             max-width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            margin: 10px 0;
+            margin: 14px 0;
             border: 1px solid #cbd5e1;
-            border-radius: 10px;
+            border-radius: 12px;
             background: #ffffff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: block;
         }
         .msg-content table {
             width: 100%;
             min-width: 480px;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 14.5px;
             text-align: left;
         }
         .msg-content th {
             background-color: #2563eb !important;
             color: #ffffff !important;
-            padding: 10px 12px !important;
+            padding: 11px 14px !important;
             border: 1px solid #cbd5e1 !important;
             font-weight: 600;
             white-space: nowrap;
         }
         .msg-content td {
-            padding: 10px 12px !important;
+            padding: 11px 14px !important;
             border: 1px solid #cbd5e1 !important;
             vertical-align: top;
-            line-height: 1.45;
+            line-height: 1.55;
         }
         .msg-content tr:nth-child(even) td { background-color: #f8fafc; }
 
         /* MESSAGE FOOTER & SMALL THIN DISCLAIMER */
-        .msg-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; color: #888; }
-        .msg-time { font-size: 11px; font-weight: 500; }
+        .msg-footer { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: #888; }
+        .msg-time { font-size: 11.5px; font-weight: 500; }
         .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .action-icon svg { width: 15px; height: 15px; fill: #888; transition: fill 0.2s; }
+        .action-icon svg { width: 16px; height: 16px; fill: #888; transition: fill 0.2s; }
         .action-icon:hover svg { fill: #000; }
 
-        /* Small, thin disclaimer right under Like/Dislike/Copy/Restore */
         .ai-disclaimer {
-            font-size: 10px;
+            font-size: 10.5px;
             font-weight: 300;
             color: #9ca3af;
-            margin-top: 4px;
+            margin-top: 5px;
             letter-spacing: 0.2px;
             line-height: 1.2;
             user-select: none;
         }
 
-        .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
+        .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
 
-        /* 3. FIXED BOTTOM FOOTER MESSAGE SECTION */
+        /* 3. FIXED BOTTOM FOOTER MESSAGE SECTION (Larger & Well-Spaced) */
         #input-container {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             width: 100%;
-            padding: 8px 12px 12px 12px;
+            padding: 12px 16px 16px 16px;
             background: #ffffff;
-            border-top: 1px solid #e5e5e5;
+            border-top: 1px solid #e5e7eb;
             z-index: 1000;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+            box-shadow: 0 -4px 14px rgba(0,0,0,0.04);
         }
 
-        .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 6px auto; }
-        .selector-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-        .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        /* SUBJECT & MODE SECTION - Slightly larger and spaced so items never tangle */
+        .selector-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 780px;
+            margin: 0 auto 12px auto;
+        }
+        .selector-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .select-btn {
+            background: #f8fafc;
+            border: 1.5px solid #0D8ABC;
+            color: #0D8ABC;
+            padding: 8px 16px;
+            border-radius: 22px;
+            font-size: 14.5px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(13, 138, 188, 0.08);
+        }
 
         /* Scrollable Dropdown List */
-        .dropdown-menu-list { display: none; position: absolute; bottom: 100%; margin-bottom: 6px; left: 0; width: 245px; max-height: 200px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); z-index: 1500; padding: 6px 0; }
-        .dropdown-item-opt { padding: 10px 14px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-menu-list {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            margin-bottom: 8px;
+            left: 0;
+            width: 260px;
+            max-height: 220px;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            z-index: 1500;
+            padding: 6px 0;
+        }
+        .dropdown-item-opt {
+            padding: 11px 16px;
+            font-size: 15px;
+            color: #1e293b;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
         .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
 
-        .selected-tag-box { display: none; align-items: center; gap: 5px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 4px 10px; border-radius: 16px; font-size: 12.5px; font-weight: 600; flex-wrap: wrap; }
-
-        /* Compact Locked Mode Bar */
-        #lockedModeBar { display: none; width: 100%; flex-direction: column; gap: 5px; }
-        .locked-subject-info {
-            font-size: 11.5px;
-            color: #475569;
+        .selected-tag-box {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 14px;
             font-weight: 600;
-            white-space: nowrap;
-            overflow-x: auto;
-            padding-left: 2px;
+            flex-wrap: wrap;
+            line-height: 1.4;
+        }
+
+        /* Locked Mode Bar - Clear spacing & slightly bigger buttons */
+        #lockedModeBar {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .locked-subject-info {
+            font-size: 13.5px;
+            color: #1e293b;
+            font-weight: 600;
+            background: #f1f5f9;
+            padding: 7px 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            border: 1px solid #e2e8f0;
         }
         .mode-Switch-group {
             display: flex;
-            gap: 6px;
+            gap: 10px;
             align-items: center;
             overflow-x: auto;
             white-space: nowrap;
-            padding-bottom: 2px;
+            padding: 2px 0;
         }
         .mode-pill-btn {
-            background: #f1f5f9;
+            background: #ffffff;
             border: 1.5px solid #cbd5e1;
             color: #334155;
-            padding: 5px 11px;
-            border-radius: 16px;
-            font-size: 12.5px;
+            padding: 8px 16px;
+            border-radius: 22px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             flex-shrink: 0;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            transition: all 0.2s ease;
         }
         .mode-pill-btn.active-mode {
             background: #0D8ABC;
             border-color: #0D8ABC;
             color: #ffffff;
+            box-shadow: 0 3px 8px rgba(13, 138, 188, 0.28);
         }
 
-        .lock-warning { font-size: 11.5px; color: #d93025; margin-top: 4px; padding-left: 4px; font-weight: 600; line-height: 1.3; }
+        .lock-warning {
+            font-size: 13px;
+            color: #d93025;
+            margin-top: 8px;
+            padding-left: 4px;
+            font-weight: 600;
+            line-height: 1.45;
+        }
 
-        /* Message Form Wrapper */
+        /* Larger, Comfortable Message Input Box (like Gemini) */
         #form-wrapper {
             width: 100%;
-            max-width: 800px;
+            max-width: 780px;
             margin: 0 auto;
-            background: #f4f4f4;
-            border-radius: 25px;
-            padding: 6px 10px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
-        .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; color: #666; flex-shrink: 0; }
+        .attach-btn { background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px 6px; color: #475569; flex-shrink: 0; }
         #prompt {
             flex: 1 1 auto;
             min-width: 0;
@@ -240,23 +374,37 @@
             border: none;
             outline: none;
             background: transparent;
-            padding: 6px 4px;
-            font-size: 15px;
+            padding: 8px 6px;
+            font-size: 16px;
+            color: #0f172a;
             resize: none;
-            max-height: 80px;
-            height: 24px;
-            line-height: 22px;
+            max-height: 90px;
+            height: 28px;
+            line-height: 24px;
             font-family: inherit;
         }
-        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .send-btn {
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
 
         /* ROUND VOICE ANIMATION BUTTON */
         .voice-anim-btn {
             background: linear-gradient(135deg, #0D8ABC, #2563eb);
             border: none;
             border-radius: 50%;
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -266,10 +414,10 @@
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
         }
         .voice-bar { width: 2.5px; background: #ffffff; border-radius: 2px; animation: voiceWave 1.1s infinite ease-in-out; }
-        .voice-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
-        .voice-bar:nth-child(2) { height: 15px; animation-delay: 0.2s; }
-        .voice-bar:nth-child(3) { height: 11px; animation-delay: 0.4s; }
-        .voice-bar:nth-child(4) { height: 14px; animation-delay: 0.1s; }
+        .voice-bar:nth-child(1) { height: 9px; animation-delay: 0s; }
+        .voice-bar:nth-child(2) { height: 16px; animation-delay: 0.2s; }
+        .voice-bar:nth-child(3) { height: 12px; animation-delay: 0.4s; }
+        .voice-bar:nth-child(4) { height: 15px; animation-delay: 0.1s; }
         @keyframes voiceWave {
             0%, 100% { transform: scaleY(0.5); }
             50% { transform: scaleY(1.25); }
@@ -307,8 +455,8 @@
         .close-voice-page { background: #ef4444; color: white; border: none; border-radius: 50%; width: 52px; height: 52px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .btn-spinner { border: 2px solid transparent; border-top: 2px solid #fff; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
-        .typing-spinner { border: 2px solid #ccc; border-top-color: #000; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; }
+        .btn-spinner { border: 2px solid transparent; border-top: 2px solid #fff; border-radius: 50%; width: 15px; height: 15px; animation: spin 1s linear infinite; }
+        .typing-spinner { border: 2px solid #ccc; border-top-color: #000; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; }
 
         #image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2500; justify-content: center; align-items: center; cursor: pointer; }
         #modal-img { max-width: 90%; max-height: 90%; border-radius: 10px; }
@@ -362,7 +510,7 @@
         <div style="display: flex; align-items: center;">
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <span style="display: flex; align-items: center; gap: 8px;">
-                <img src="/static/bot.png" style="width: 24px; height: 24px; border-radius: 5px;" alt="AI"> AI Notes
+                <img src="/static/bot.png" style="width: 26px; height: 26px; border-radius: 6px;" alt="AI"> AI Notes
             </span>
         </div>
         <button class="new-chat-btn" onclick="startNewChat()" title="New Chat">➕</button>
@@ -374,7 +522,6 @@
             {% for chat in history %}
                 <!-- User Message -->
                 <div class="message-row user-row" id="row-{{ chat.id }}">
-                    <div class="avatar"><img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true"></div>
                     <div class="message user-msg">
                         <div class="msg-content" id="msg-{{ chat.id }}">
                             {% if chat.img_url %}
@@ -391,9 +538,11 @@
                     </div>
                 </div>
                 
-                <!-- AI Message (Isolated via template so unclosed tags never break layout) -->
+                <!-- AI Message (Full balanced width with equal left-right screen gaps like Gemini) -->
                 <div class="message-row bot-row" id="bot-row-{{ chat.id }}">
-                    <div class="avatar"><img src="/static/bot.png" style="border-radius: 5px;"></div>
+                    <div class="bot-header-line">
+                        <img src="/static/bot.png" alt="AI"> AI Notes
+                    </div>
                     <div class="message bot-msg">
                         <div class="msg-content raw-bot-msg">{{ chat.ai_msg }}</div>
                         <div class="msg-footer">
@@ -476,7 +625,7 @@
                 </div>
             </div>
 
-            <!-- Locked Chat Mode Switcher Bar -->
+            <!-- Locked Chat Mode Switcher Bar (Spacious & Uncluttered) -->
             <div id="lockedModeBar">
                 <div class="locked-subject-info" id="lockedInfoText"></div>
                 <div class="mode-Switch-group">
@@ -492,8 +641,8 @@
         </div>
 
         <div id="image-preview-container" style="display: none; position: relative; margin-bottom: 10px; width: fit-content; padding-left: 10px;">
-            <img id="image-preview" src="" style="width: 68px; height: 68px; object-fit: cover; border-radius: 8px; border: 2px solid #0D8ABC;">
-            <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
+            <img id="image-preview" src="" style="width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 2px solid #0D8ABC;">
+            <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
         </div>
         
         <div id="form-wrapper">
@@ -517,7 +666,6 @@
         const inputContainer = document.getElementById('input-container');
         let currentSessionId = "{{ current_session }}";
 
-        // Dynamically keep #chat-box bottom aligned with fixed #input-container height
         function syncChatBoxBottom() {
             if (inputContainer && chatBox) {
                 chatBox.style.bottom = inputContainer.offsetHeight + 'px';
@@ -528,12 +676,10 @@
         }
         window.addEventListener('resize', syncChatBoxBottom);
 
-        // Safely format AI response & auto-close any truncated/unclosed HTML tags so layout NEVER breaks
         function formatBotResponse(rawText) {
             if (!rawText) return "";
             let cleaned = rawText.replace(/<\/?u>/gi, "");
 
-            // If AI output was truncated mid-table without closing </table>, close it automatically
             const openTables = (cleaned.match(/<table/gi) || []).length;
             const closeTables = (cleaned.match(/<\/table>/gi) || []).length;
             if (openTables > closeTables) {
@@ -548,7 +694,6 @@
             cleaned = cleaned.replace(/<\/table><\/div>\s*<\/div>/g, '</table></div>');
             cleaned = cleaned.replace(/\n/g, "<br>");
 
-            // Parse inside isolated detached DOM element so any unclosed tags are auto-closed by browser
             const safeIsolator = document.createElement('div');
             safeIsolator.innerHTML = cleaned;
             return safeIsolator.innerHTML;
@@ -711,7 +856,10 @@
         function activateLockedChatMode() {
             document.getElementById("initialSetupBar").style.display = "none";
             document.getElementById("lockedModeBar").style.display = "flex";
-            document.getElementById("lockedInfoText").innerHTML = `🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b> <span style="color:#888; font-weight:normal;">(➕ New Chat for other subject)</span>`;
+            document.getElementById("lockedInfoText").innerHTML = `
+                <span>🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b></span>
+                <span style="color:#64748b; font-size:12px; font-weight:500;">(➕ New Chat for other subject)</span>
+            `;
 
             document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
             const activeBtn = document.getElementById(`pill-${selectedMode}`);
@@ -753,7 +901,7 @@
             sendBtn.disabled = !isUnlocked;
 
             if (isUnlocked) {
-                promptInput.placeholder = `Message for ${selectedMode} (${selectedSubject})...`;
+                promptInput.placeholder = `Ask for ${selectedMode} in ${selectedSubject}...`;
                 sendBtn.style.opacity = "1";
                 sendBtn.style.cursor = "pointer";
                 lockNotice.style.display = "none";
@@ -775,7 +923,6 @@
         }
 
         window.addEventListener("DOMContentLoaded", () => {
-            // Safely render escaped bot messages so unclosed tags never leak out
             document.querySelectorAll('.raw-bot-msg').forEach(el => {
                 const rawContent = el.textContent;
                 el.innerHTML = formatBotResponse(rawContent);
@@ -882,10 +1029,6 @@
             rowDiv.className = 'message-row user-row';
             rowDiv.id = `row-${msgId}`;
             
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'avatar';
-            avatarDiv.innerHTML = '<img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true">';
-            
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message user-msg';
             
@@ -905,7 +1048,6 @@
             </div>`;
             
             msgDiv.innerHTML = contentHTML;
-            rowDiv.appendChild(avatarDiv);
             rowDiv.appendChild(msgDiv);
             chatBox.appendChild(rowDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -916,9 +1058,9 @@
             rowDiv.className = 'message-row bot-row';
             rowDiv.id = `bot-row-${msgId}`;
 
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'avatar';
-            avatarDiv.innerHTML = '<img src="/static/bot.png" style="border-radius: 5px;">';
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'bot-header-line';
+            headerDiv.innerHTML = '<img src="/static/bot.png" alt="AI"> AI Notes';
 
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message bot-msg';
@@ -936,7 +1078,7 @@
             </div>
             <div class="ai-disclaimer" id="disc-${msgId}" style="display:none;">AI Notes is AI and can make mistakes.</div>`;
 
-            rowDiv.appendChild(avatarDiv);
+            rowDiv.appendChild(headerDiv);
             rowDiv.appendChild(msgDiv);
             chatBox.appendChild(rowDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -1100,4 +1242,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
