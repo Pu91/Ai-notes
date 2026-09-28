@@ -15,7 +15,6 @@ from datetime import timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore, auth as firebase_auth
 
-# আমাদের তৈরি করা main_prompt.py ফাইল থেকে ফাংশনগুলো ইমপোর্ট করা হচ্ছে
 from main_prompt import get_system_instruction, OCR_PROMPT, get_image_notes_prompt
 
 app = Flask(__name__)
@@ -51,7 +50,7 @@ def clean_and_format_response(text):
     text = re.sub(r'(?m)^\s*-\s+', '• ', text)
     return text
 
-# টোকেন বাঁচানোর জন্য চেক করা: ইউজার কি আগের মেসেজের ওপর ডাউট বা প্রশ্ন করছে?
+# টোকেন বাঁচানোর জন্য চেক করা: ইউজার কি আগের মেসেজের ওপর ডাউট বা পয়েন্ট জানতে চাইছে?
 def needs_previous_context(prompt_text, has_new_image=False):
     if has_new_image:
         return False
@@ -63,9 +62,9 @@ def needs_previous_context(prompt_text, has_new_image=False):
     clean_user_text = re.sub(r'\[.*?\]\s*', '', q).strip()
 
     followup_keywords = [
-        "নম্বর", "নাম্বার", "number", "no", "দাগ", "প্রশ্নটা", "উত্তরটা",
-        "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar",
-        "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi",
+        "নম্বর", "নাম্বার", "number", "no", "দাগ", "পয়েন্ট", "পয়েন্ট", "point", "pint", "টপিক", "topic",
+        "প্রশ্নটা", "উত্তরটা", "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar",
+        "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi", "বলো", "bolo",
         "ব্যাখ্যা", "explain", "detail", "short", "ডাউট", "doubt", "কেন", "কিভাবে",
         "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯", "১০",
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
@@ -73,12 +72,12 @@ def needs_previous_context(prompt_text, has_new_image=False):
     if any(word in clean_user_text for word in followup_keywords):
         return True
 
-    if len(clean_user_text.split()) <= 8:
+    if len(clean_user_text.split()) <= 10:
         return True
 
     return False
 
-# টোকেন বাঁচিয়ে শুধুমাত্র জাস্ট আগের (শেষের ১টি) মেসেজ তুলে আনার ফাংশন
+# টোকেন বাঁচিয়ে আগের মেসেজের পয়েন্ট ও লাইন ব্রেক অক্ষুণ্ণ রেখে হিস্ট্রি আনার ফাংশন
 def get_smart_chat_history(user_email, session_id, exclude_msg_id=None):
     history_messages = []
     if not session_id or session_id == "None":
@@ -91,21 +90,23 @@ def get_smart_chat_history(user_email, session_id, exclude_msg_id=None):
                 break
             raw_list.append(m.to_dict())
 
-        if raw_list:
-            last_item = raw_list[-1]
-            u_msg = re.sub(r'\[.*?\]\s*', '', last_item.get('user_msg', '')).strip()
-            ocr_txt = last_item.get('ocr_text', '')
-            a_msg = last_item.get('ai_msg', '')
+        # শেষের ২টি মেসেজ (যাতে মূল নোটস এবং জাস্ট আগের মেসেজ দুটোই থাকে)
+        for item in raw_list[-2:]:
+            u_msg = re.sub(r'\[.*?\]\s*', '', item.get('user_msg', '')).strip()
+            ocr_txt = item.get('ocr_text', '')
+            a_msg = item.get('ai_msg', '')
 
             if ocr_txt:
-                u_msg = f"আগের ছবির প্রশ্ন/সিলেবাস: {ocr_txt[:1000]}\nইউজারের নির্দেশ: {u_msg}"
+                u_msg = f"আগের ছবির প্রশ্ন/সিলেবাস:\n{ocr_txt[:1200]}\nইউজারের নির্দেশ: {u_msg}"
 
             if u_msg:
                 history_messages.append({"role": "user", "content": u_msg[:1200]})
             if a_msg:
-                clean_a_msg = re.sub(r'<[^>]+>', ' ', a_msg)
-                clean_a_msg = re.sub(r'\s+', ' ', clean_a_msg).strip()
-                history_messages.append({"role": "assistant", "content": clean_a_msg[:2500]})
+                # লাইন ব্রেক (\n) ঠিক রাখা হচ্ছে যাতে ১, ২, ৩ নম্বর পয়েন্টগুলো এআই স্পষ্ট চিনতে পারে
+                clean_a_msg = re.sub(r'<br\s*/?>', '\n', a_msg)
+                clean_a_msg = re.sub(r'<[^>]+>', '', clean_a_msg)
+                clean_a_msg = re.sub(r'\n{3,}', '\n\n', clean_a_msg).strip()
+                history_messages.append({"role": "assistant", "content": clean_a_msg[:3000]})
     except Exception:
         pass
     return history_messages
@@ -141,17 +142,18 @@ def get_ai_response(prompt, base64_image=None, chat_history=None):
         except Exception as e:
             raise Exception(f"Vision Model Error: {str(e)}")
 
-    # প্রশ্ন বা ছবির লেখা দেখে অটোমেটিক সঠিক সাবজেক্টের প্রম্পট সিলেক্ট হবে
     system_instruction = get_system_instruction(combined_context)
 
     messages_payload = [{"role": "system", "content": system_instruction}]
     if chat_history:
         messages_payload.extend(chat_history)
-        final_prompt = f"{final_prompt}\n(বিশেষ নির্দেশ: ইউজার আগের দেওয়া প্রশ্ন বা উত্তরের পরিপ্রেক্ষিতে এই মেসেজটি দিয়েছে। তাই আগের মেসেজটি দেখে ঠিক সেই প্রশ্নেরই সঠিক ও বিস্তারিত উত্তর দাও।)"
+        final_prompt = f"""{final_prompt}
+
+[জরুরি নির্দেশ: ইউজার ওপরে দেওয়া তোমার আগের উত্তরের (Previous Assistant Message) পরিপ্রেক্ষিতে এই প্রশ্নটি করেছে। ইউজার যদি '2 number point/pint', '২ নম্বর টপিক' বা কোনো নির্দিষ্ট নম্বর উল্লেখ করে, তবে তোমার আগের উত্তরের ভেতরে থাকা সেই ক্রমিক নম্বরের পয়েন্ট বা টপিকটিই (যেমন: ২ নম্বর পয়েন্ট বা ২ নম্বর বুলেট টপিক) বিস্তারিতভাবে বুঝিয়ে বলো। ভুলেও সেটিকে '২ নম্বরের প্রশ্ন (2-Mark Question)' ভাববে না!]"""
 
     messages_payload.append({"role": "user", "content": final_prompt})
 
-    # ২. মূল উত্তর ও গোছানো বাংলা নোটস তৈরি করবে OpenAI GPT-OSS-120B মডেল
+    # ২. মূল উত্তর তৈরি করবে OpenAI GPT-OSS-120B মডেল
     text_models = [
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b",
@@ -164,7 +166,7 @@ def get_ai_response(prompt, base64_image=None, chat_history=None):
             kwargs = {
                 "model": model_name,
                 "messages": messages_payload,
-                "temperature": 0.4
+                "temperature": 0.3
             }
             if "qwen" in model_name:
                 kwargs["max_tokens"] = 750
@@ -351,7 +353,6 @@ def chat():
             prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
 
     try:
-        # স্মার্ট চেক: শুধুমাত্র আগের প্রশ্ন নিয়ে কিছু জানতে চাইলেই শেষের ১টি মেসেজ যাবে (টোকেন নষ্ট হবে না)
         chat_history = []
         if not is_new_session and needs_previous_context(prompt, has_new_image=(base64_image is not None)):
             chat_history = get_smart_chat_history(user_email, session_id)
