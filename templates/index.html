@@ -8,7 +8,7 @@
         html, body { height: 100dvh; margin: 0; padding: 0; background-color: #ffffff; color: #333; font-family: -apple-system, sans-serif; overflow: hidden; }
         #main-area { display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; overflow: hidden; }
         
-        /* Fixed Top Header */
+        /* Updated Header - Fixed Top */
         #header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-weight: bold; font-size: 18px; background: #fff; z-index: 1000; box-sizing: border-box;}
         
         .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; margin-right: 15px; }
@@ -24,26 +24,26 @@
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
         #overlay.open { display: block; }
         
-        /* Chat Box properly constrained so tables never break out below input box */
+        /* Chat Box adjusted for fixed header & constrained so tables never push input box out */
         #chat-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 14px; display: flex; flex-direction: column; scroll-behavior: smooth; margin-top: 60px; box-sizing: border-box; }
-        .message-row { display: flex; gap: 10px; margin-bottom: 24px; width: 100%; box-sizing: border-box; }
+        .message-row { display: flex; gap: 10px; margin-bottom: 25px; width: 100%; box-sizing: border-box; }
         .user-row { flex-direction: row-reverse; }
         .bot-row { flex-direction: row; }
         
-        .avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0;}
+        .avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0;}
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         
-        .message { max-width: calc(100% - 48px); min-width: 0; position: relative; display: flex; flex-direction: column; }
+        .message { max-width: calc(100% - 48px); min-width: 0; position: relative; display: flex; flex-direction: column;}
         .user-msg { max-width: 78%; }
         .bot-msg { width: 100%; }
         .msg-content { padding: 12px 16px; border-radius: 12px; line-height: 1.55; font-size: 15px; word-wrap: break-word; overflow-wrap: break-word; }
         .user-row .msg-content { background-color: #f3f3f3; border-top-right-radius: 4px; }
-        .bot-row .msg-content { background-color: transparent; padding: 6px 0; width: 100%; overflow: hidden; }
+        .bot-row .msg-content { background-color: transparent; padding: 8px 0; width: 100%; overflow: hidden; }
 
-        /* No underline even if AI outputs <u> tag */
+        /* Disable any underline inside bot response */
         .bot-row .msg-content u { text-decoration: none !important; }
 
-        /* === HORIZONTAL SCROLLABLE TABLE BOX === */
+        /* === HORIZONTAL SCROLLABLE TABLE BOX (Pase Scroll Kora Jabe) === */
         .table-scroll-box {
             width: 100%;
             overflow-x: auto;
@@ -54,24 +54,24 @@
             background: #ffffff;
             box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
-        .msg-content table, .ai-table {
+        .msg-content table {
             width: 100%;
-            min-width: 480px; /* Forces horizontal scroll on mobile so columns never squish */
+            min-width: 500px; /* Forces smooth side-by-side scroll on mobile screens */
             border-collapse: collapse;
             font-size: 14px;
             text-align: left;
         }
-        .msg-content th, .ai-table th {
-            background-color: #2563eb;
-            color: #ffffff;
-            padding: 10px 12px;
-            border: 1px solid #cbd5e1;
+        .msg-content th {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            padding: 10px 12px !important;
+            border: 1px solid #cbd5e1 !important;
             font-weight: 600;
             white-space: nowrap;
         }
-        .msg-content td, .ai-table td {
-            padding: 10px 12px;
-            border: 1px solid #e2e8f0;
+        .msg-content td {
+            padding: 10px 12px !important;
+            border: 1px solid #cbd5e1 !important;
             vertical-align: top;
             line-height: 1.45;
         }
@@ -79,7 +79,7 @@
             background-color: #f8fafc;
         }
         
-        /* Icons & Time Design */
+        /* New Icons & Time Design */
         .msg-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; color: #888; }
         .msg-time { font-size: 11px; font-weight: 500;}
         .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;}
@@ -88,16 +88,16 @@
         
         .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
         
-        #input-container { flex: 0 0 auto; padding: 10px 12px 14px 12px; background: #fff; border-top: 1px solid #eaeaea; z-index: 500; box-sizing: border-box; width: 100%; }
+        #input-container { flex: 0 0 auto; width: 100%; box-sizing: border-box; padding: 10px 15px 15px 15px; background: #fff; border-top: 1px solid #f0f0f0; z-index: 500; }
         
         /* === SUBJECT, COURSE & LANGUAGE SELECTOR STYLES === */
         .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 8px auto; box-sizing: border-box; }
         .selector-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
         .select-btn:hover { background: #eef7fa; }
         
         /* Scrollable Dropdown List */
-        .dropdown-menu-list { display: none; position: absolute; bottom: 100%; margin-bottom: 6px; left: 0; width: 250px; max-height: 200px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 1500; padding: 6px 0; }
+        .dropdown-menu-list { display: none; position: absolute; bottom: 100%; margin-bottom: 6px; left: 0; width: 250px; max-height: 210px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 1500; padding: 6px 0; }
         .dropdown-item-opt { padding: 10px 15px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
         
@@ -106,10 +106,10 @@
         .close-tag-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 13px; line-height: 18px; text-align: center; cursor: pointer; margin-left: 4px; font-weight: bold; }
         .lock-warning { font-size: 12px; color: #d93025; margin-top: 5px; padding-left: 4px; font-weight: 600; line-height: 1.35; }
 
-        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 26px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; }
+        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; transition: opacity 0.2s; }
         .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; color: #666; flex-shrink: 0; }
-        #prompt { flex: 1 1 auto; min-width: 0; width: 100%; border: none; outline: none; background: transparent; padding: 8px 4px; font-size: 15px; resize: none; max-height: 90px; height: 22px; line-height: 22px; font-family: inherit; }
-        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        #prompt { flex: 1 1 auto; min-width: 0; width: 100%; border: none; outline: none; background: transparent; padding: 8px 4px; font-size: 15px; resize: none; max-height: 100px; height: 24px; line-height: 24px; font-family: inherit; }
+        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; transition: 0.2s;}
 
         /* === ROUND VOICE ANIMATION BUTTON === */
         .voice-anim-btn {
@@ -125,6 +125,7 @@
             gap: 2.5px;
             flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+            position: relative;
         }
         .voice-bar {
             width: 2.5px;
@@ -158,7 +159,13 @@
             box-sizing: border-box;
             color: #ffffff;
         }
-        .voice-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: auto 0; }
+        .voice-orb-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: auto 0;
+        }
         .voice-orb {
             width: 130px;
             height: 130px;
@@ -200,7 +207,7 @@
         <img id="modal-img" src="">
     </div>
 
-    <!-- === VOICE PAGE MODAL === -->
+    <!-- === VOICE PAGE MODAL (Placeholder for future Voice Assistant) === -->
     <div id="voice-page-modal">
         <div style="font-size: 16px; font-weight: 600; opacity: 0.85;">AI Notes Voice Mode</div>
         <div class="voice-orb-container">
@@ -291,7 +298,7 @@
         <div id="input-container">
             <!-- === 3-STEP SELECTOR: SUBJECT ➔ HONOURS/GENERAL ➔ LANGUAGE === -->
             <div class="selector-wrapper">
-                <!-- 1. Subject List -->
+                <!-- 1. Subject List (Scrollable & Filterable by typing) -->
                 <div id="subjectDropdown" class="dropdown-menu-list">
                     <div class="dropdown-item-opt subject-opt" data-name="Zoology" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
                     <div class="dropdown-item-opt subject-opt" data-name="Botany" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
@@ -318,7 +325,7 @@
                     <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC <span>➔</span></div>
                 </div>
 
-                <!-- 3. Language List -->
+                <!-- 3. Language List (Bengali / English) -->
                 <div id="langDropdown" class="dropdown-menu-list">
                     <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>✓</span></div>
                     <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>✓</span></div>
@@ -358,7 +365,7 @@
             <div id="form-wrapper">
                 <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
                 <button class="attach-btn" id="attach-btn" type="button" onclick="handleAttachClick()">📎</button>
-                <textarea id="prompt" placeholder="Type subject name or select above..." oninput="handlePromptTyping(this.value)"></textarea>
+                <textarea id="prompt" placeholder="Type subject name (e.g. Zoology) or select above..." oninput="handlePromptTyping(this.value)"></textarea>
                 
                 <!-- Send Button -->
                 <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()" title="Send Message">↑</button>
@@ -383,10 +390,9 @@
             if (!htmlText) return "";
             // 1. Remove any <u> underline tags
             let cleaned = htmlText.replace(/<\/?u>/gi, "");
-            // 2. Remove newlines inside <table>...</table> so <br> doesn't break table layout
+            // 2. Remove newlines inside <table>...</table> so <br> doesn't break table layout, and wrap in scroll box
             cleaned = cleaned.replace(/<table[\s\S]*?<\/table>/gi, function(tableMatch) {
                 let compactTable = tableMatch.replace(/\r?\n/g, " ");
-                if (compactTable.includes("table-scroll-box")) return compactTable;
                 return `<div class="table-scroll-box">${compactTable}</div>`;
             });
             // Avoid double wrapping if AI already added table-scroll-box
@@ -395,14 +401,6 @@
             // 3. Replace remaining newlines outside tables with <br>
             return cleaned.replace(/\n/g, "<br>");
         }
-
-        // Format existing chat history on load
-        window.addEventListener("DOMContentLoaded", () => {
-            document.querySelectorAll('.raw-bot-msg').forEach(el => {
-                el.innerHTML = formatBotResponse(el.innerHTML);
-            });
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
 
         // === VOICE PAGE FUNCTIONS ===
         function openVoicePage() {
@@ -424,7 +422,8 @@
         }
 
         function resetSubjectFilter() {
-            document.querySelectorAll('.subject-opt').forEach(item => item.style.display = 'flex');
+            const items = document.querySelectorAll('.subject-opt');
+            items.forEach(item => item.style.display = 'flex');
         }
 
         function toggleSubjectList() {
@@ -449,8 +448,10 @@
             el.style.display = isOpen ? "none" : "block";
         }
 
+        // Type alphabet in message box to search & filter Subject
         function handlePromptTyping(val) {
             const query = val.trim().toLowerCase();
+
             if (!selectedSubject) {
                 const dropdown = document.getElementById("subjectDropdown");
                 const items = document.querySelectorAll('.subject-opt');
@@ -481,6 +482,7 @@
             resetSubjectFilter();
 
             document.getElementById("prompt").value = "";
+
             document.getElementById("mainSubjectBtn").style.display = "none";
             document.getElementById("selectedBadge").style.display = "inline-flex";
             document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Select Honours/General)</span>`;
@@ -552,20 +554,21 @@
             const lockNotice = document.getElementById("lockNotice");
 
             const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "");
+
             sendBtn.disabled = !isUnlocked;
 
             if (isUnlocked) {
-                promptInput.placeholder = `Message ${selectedSubject} (${selectedCourse})...`;
+                promptInput.placeholder = `Ask or upload syllabus for ${selectedSubject} (${selectedCourse} - ${selectedLang})...`;
                 sendBtn.style.opacity = "1";
                 sendBtn.style.cursor = "pointer";
                 lockNotice.style.display = "none";
             } else {
                 if (!selectedSubject) {
-                    promptInput.placeholder = "Type subject name or select above...";
+                    promptInput.placeholder = "Type subject name (e.g. Zoology) or select above...";
                 } else if (!selectedCourse) {
-                    promptInput.placeholder = "Select Honours or General above...";
+                    promptInput.placeholder = "Please select Honours or General above...";
                 } else {
-                    promptInput.placeholder = "Select Language above...";
+                    promptInput.placeholder = "Please select Language (Bengali / English) above...";
                 }
                 sendBtn.style.opacity = "0.35";
                 sendBtn.style.cursor = "not-allowed";
@@ -574,18 +577,26 @@
         }
 
         window.addEventListener("DOMContentLoaded", () => {
+            // Format existing chat messages & tables properly on load
+            document.querySelectorAll('.raw-bot-msg').forEach(el => {
+                el.innerHTML = formatBotResponse(el.innerHTML);
+            });
+
             if (selectedSubject && selectedCourse && selectedLang) {
                 document.getElementById("mainSubjectBtn").style.display = "none";
                 document.getElementById("selectedBadge").style.display = "inline-flex";
                 document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang}`;
             }
             updateLockState();
+            chatBox.scrollTop = chatBox.scrollHeight;
         });
 
+        // Get Current Time nicely formatted
         function getCurrentTime() {
             return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         }
 
+        // Add Copy Function
         function copyText(btn) {
             const content = btn.closest('.message').querySelector('.msg-content').innerText;
             navigator.clipboard.writeText(content);
