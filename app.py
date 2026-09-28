@@ -45,16 +45,77 @@ def clean_and_format_response(text):
     if not text or "<img" in text:
         return text
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-    text = re.sub(r'(?m)^#{1,6}\s*(.*?)$', r'<b><u>\1</u></b>', text)
+    text = re.sub(r'(?m)^#{1,6}\s*(.*?)$', r'<b>\1</b>', text)
+    text = re.sub(r'</?u>', '', text)
     text = re.sub(r'(?m)^\s*\*\s+', '• ', text)
     text = re.sub(r'(?m)^\s*-\s+', '• ', text)
     return text
 
-def get_ai_response(prompt, base64_image=None):
+# টোকেন বাঁচানোর জন্য চেক করা: ইউজার কি আগের মেসেজের ওপর ডাউট বা প্রশ্ন করছে?
+def needs_previous_context(prompt_text, has_new_image=False):
+    if has_new_image:
+        return False
+    
+    q = prompt_text.lower()
+    if "mode: doubt solve" in q:
+        return True
+
+    clean_user_text = re.sub(r'\[.*?\]\s*', '', q).strip()
+
+    followup_keywords = [
+        "নম্বর", "নাম্বার", "number", "no", "দাগ", "প্রশ্নটা", "উত্তরটা",
+        "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar",
+        "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi",
+        "ব্যাখ্যা", "explain", "detail", "short", "ডাউট", "doubt", "কেন", "কিভাবে",
+        "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯", "১০",
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+    ]
+    if any(word in clean_user_text for word in followup_keywords):
+        return True
+
+    if len(clean_user_text.split()) <= 8:
+        return True
+
+    return False
+
+# টোকেন বাঁচিয়ে শুধুমাত্র জাস্ট আগের (শেষের ১টি) মেসেজ তুলে আনার ফাংশন
+def get_smart_chat_history(user_email, session_id, exclude_msg_id=None):
+    history_messages = []
+    if not session_id or session_id == "None":
+        return history_messages
+    try:
+        msgs_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
+        raw_list = []
+        for m in msgs_ref:
+            if exclude_msg_id and m.id == exclude_msg_id:
+                break
+            raw_list.append(m.to_dict())
+
+        if raw_list:
+            last_item = raw_list[-1]
+            u_msg = re.sub(r'\[.*?\]\s*', '', last_item.get('user_msg', '')).strip()
+            ocr_txt = last_item.get('ocr_text', '')
+            a_msg = last_item.get('ai_msg', '')
+
+            if ocr_txt:
+                u_msg = f"আগের ছবির প্রশ্ন/সিলেবাস: {ocr_txt[:1000]}\nইউজারের নির্দেশ: {u_msg}"
+
+            if u_msg:
+                history_messages.append({"role": "user", "content": u_msg[:1200]})
+            if a_msg:
+                clean_a_msg = re.sub(r'<[^>]+>', ' ', a_msg)
+                clean_a_msg = re.sub(r'\s+', ' ', clean_a_msg).strip()
+                history_messages.append({"role": "assistant", "content": clean_a_msg[:2500]})
+    except Exception:
+        pass
+    return history_messages
+
+def get_ai_response(prompt, base64_image=None, chat_history=None):
     final_prompt = prompt
     combined_context = prompt
+    extracted_image_text = ""
 
-    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির লেখা পড়ে নেওয়া হবে
+    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির লেখা পড়ে নেওয়া হবে
     if base64_image:
         try:
             vision_response = client.chat.completions.create(
@@ -83,6 +144,13 @@ def get_ai_response(prompt, base64_image=None):
     # প্রশ্ন বা ছবির লেখা দেখে অটোমেটিক সঠিক সাবজেক্টের প্রম্পট সিলেক্ট হবে
     system_instruction = get_system_instruction(combined_context)
 
+    messages_payload = [{"role": "system", "content": system_instruction}]
+    if chat_history:
+        messages_payload.extend(chat_history)
+        final_prompt = f"{final_prompt}\n(বিশেষ নির্দেশ: ইউজার আগের দেওয়া প্রশ্ন বা উত্তরের পরিপ্রেক্ষিতে এই মেসেজটি দিয়েছে। তাই আগের মেসেজটি দেখে ঠিক সেই প্রশ্নেরই সঠিক ও বিস্তারিত উত্তর দাও।)"
+
+    messages_payload.append({"role": "user", "content": final_prompt})
+
     # ২. মূল উত্তর ও গোছানো বাংলা নোটস তৈরি করবে OpenAI GPT-OSS-120B মডেল
     text_models = [
         "openai/gpt-oss-120b",
@@ -95,10 +163,7 @@ def get_ai_response(prompt, base64_image=None):
         try:
             kwargs = {
                 "model": model_name,
-                "messages": [
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": final_prompt}
-                ],
+                "messages": messages_payload,
                 "temperature": 0.4
             }
             if "qwen" in model_name:
@@ -106,7 +171,7 @@ def get_ai_response(prompt, base64_image=None):
 
             response = client.chat.completions.create(**kwargs)
             raw_reply = response.choices[0].message.content
-            return clean_and_format_response(raw_reply)
+            return clean_and_format_response(raw_reply), extracted_image_text
         except Exception as e:
             last_error = e
             continue
@@ -255,7 +320,10 @@ def chat():
     session_id = request.form.get('session_id')
     file = request.files.get('file')
     
-    if not session_id or session_id == "None": session_id = str(uuid.uuid4())
+    is_new_session = False
+    if not session_id or session_id == "None":
+        session_id = str(uuid.uuid4())
+        is_new_session = True
     
     img_url = None
     base64_image = None
@@ -280,14 +348,20 @@ def chat():
             base64_image = encode_image(filepath)
         
         if not prompt:
-            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
+            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
 
     try:
-        ai_response = get_ai_response(prompt, base64_image=base64_image)
+        # স্মার্ট চেক: শুধুমাত্র আগের প্রশ্ন নিয়ে কিছু জানতে চাইলেই শেষের ১টি মেসেজ যাবে (টোকেন নষ্ট হবে না)
+        chat_history = []
+        if not is_new_session and needs_previous_context(prompt, has_new_image=(base64_image is not None)):
+            chat_history = get_smart_chat_history(user_email, session_id)
+
+        ai_response, extracted_ocr_text = get_ai_response(prompt, base64_image=base64_image, chat_history=chat_history)
         
         session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
         if not session_ref.get().exists:
-            title = prompt[:25] + "..." if prompt else "Image Notes..."
+            clean_title = re.sub(r'\[.*?\]\s*', '', prompt).strip()
+            title = (clean_title[:25] + "...") if clean_title else "Image Notes..."
             session_ref.set({'title': title, 'created_at': firestore.SERVER_TIMESTAMP})
         
         chat_data = {
@@ -299,6 +373,8 @@ def chat():
             chat_data['img_url'] = img_url
         if base64_image:
             chat_data['img_b64'] = base64_image
+        if extracted_ocr_text:
+            chat_data['ocr_text'] = extracted_ocr_text
             
         update_time, doc_ref = session_ref.collection('messages').add(chat_data)
         
@@ -343,13 +419,20 @@ def edit_chat():
                         base64_image = encode_image(potential_path)
                         break
 
-        ai_response = get_ai_response(prompt, base64_image=base64_image)
+        chat_history = []
+        if needs_previous_context(prompt, has_new_image=(base64_image is not None)):
+            chat_history = get_smart_chat_history(user_email, session_id, exclude_msg_id=msg_id)
+
+        ai_response, extracted_ocr_text = get_ai_response(prompt, base64_image=base64_image, chat_history=chat_history)
         
         if doc_ref and doc_ref.get().exists:
-            doc_ref.update({
+            update_payload = {
                 'user_msg': prompt,
                 'ai_msg': ai_response
-            })
+            }
+            if extracted_ocr_text:
+                update_payload['ocr_text'] = extracted_ocr_text
+            doc_ref.update(update_payload)
         elif session_id and session_id != "None":
             db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').add({
                 'user_msg': prompt,
