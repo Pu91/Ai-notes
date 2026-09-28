@@ -43,7 +43,7 @@
         /* Disable any underline inside bot response */
         .bot-row .msg-content u { text-decoration: none !important; }
 
-        /* === HORIZONTAL SCROLLABLE TABLE BOX (Pase Scroll Kora Jabe) === */
+        /* === HORIZONTAL SCROLLABLE TABLE BOX === */
         .table-scroll-box {
             width: 100%;
             overflow-x: auto;
@@ -56,7 +56,7 @@
         }
         .msg-content table {
             width: 100%;
-            min-width: 500px; /* Forces smooth side-by-side scroll on mobile screens */
+            min-width: 500px;
             border-collapse: collapse;
             font-size: 14px;
             text-align: left;
@@ -90,7 +90,7 @@
         
         #input-container { flex: 0 0 auto; width: 100%; box-sizing: border-box; padding: 10px 15px 15px 15px; background: #fff; border-top: 1px solid #f0f0f0; z-index: 500; }
         
-        /* === SUBJECT, COURSE & LANGUAGE SELECTOR STYLES === */
+        /* === 4-STEP SELECTOR STYLES === */
         .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 8px auto; box-sizing: border-box; }
         .selector-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
@@ -207,7 +207,7 @@
         <img id="modal-img" src="">
     </div>
 
-    <!-- === VOICE PAGE MODAL (Placeholder for future Voice Assistant) === -->
+    <!-- === VOICE PAGE MODAL === -->
     <div id="voice-page-modal">
         <div style="font-size: 16px; font-weight: 600; opacity: 0.85;">AI Notes Voice Mode</div>
         <div class="voice-orb-container">
@@ -296,7 +296,7 @@
         </div>
 
         <div id="input-container">
-            <!-- === 3-STEP SELECTOR: SUBJECT ➔ HONOURS/GENERAL ➔ LANGUAGE === -->
+            <!-- === 4-STEP SELECTOR: SUBJECT ➔ HONOURS/GENERAL ➔ LANGUAGE ➔ MODE === -->
             <div class="selector-wrapper">
                 <!-- 1. Subject List (Scrollable & Filterable by typing) -->
                 <div id="subjectDropdown" class="dropdown-menu-list">
@@ -327,8 +327,15 @@
 
                 <!-- 3. Language List (Bengali / English) -->
                 <div id="langDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>✓</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>✓</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>➔</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>➔</span></div>
+                </div>
+
+                <!-- 4. Mode List (Notes / Question Answer / Doubt Solve) -->
+                <div id="modeDropdown" class="dropdown-menu-list">
+                    <div class="dropdown-item-opt" onclick="chooseMode('Notes')">📝 Notes <span>✓</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseMode('Question Answer')">❓ Question Answer <span>✓</span></div>
+                    <div class="dropdown-item-opt" onclick="chooseMode('Doubt Solve')">💡 Doubt Solve <span>✓</span></div>
                 </div>
 
                 <!-- Buttons & Active Selection Badge -->
@@ -345,6 +352,10 @@
                         🗣️ Language (Bengali / English) <span>▾</span>
                     </button>
 
+                    <button type="button" id="modeTypeBtn" class="select-btn" style="display:none;" onclick="toggleModeList()">
+                        📝 Notes / Q&A / Doubt <span>▾</span>
+                    </button>
+
                     <!-- Arrow Badge above Message Box -->
                     <div id="selectedBadge" class="selected-tag-box">
                         <span id="badgeText"></span>
@@ -353,7 +364,7 @@
                 </div>
 
                 <div id="lockNotice" class="lock-warning">
-                    ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language</b> (or type subject name below) before sending a message.
+                    ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt</b> (or type subject name below) before sending a message.
                 </div>
             </div>
 
@@ -388,17 +399,13 @@
         // Safely format AI response: Removes <u> underlines, prevents <br> inside tables, and wraps tables in a horizontal scroll box
         function formatBotResponse(htmlText) {
             if (!htmlText) return "";
-            // 1. Remove any <u> underline tags
             let cleaned = htmlText.replace(/<\/?u>/gi, "");
-            // 2. Remove newlines inside <table>...</table> so <br> doesn't break table layout, and wrap in scroll box
             cleaned = cleaned.replace(/<table[\s\S]*?<\/table>/gi, function(tableMatch) {
                 let compactTable = tableMatch.replace(/\r?\n/g, " ");
                 return `<div class="table-scroll-box">${compactTable}</div>`;
             });
-            // Avoid double wrapping if AI already added table-scroll-box
             cleaned = cleaned.replace(/<div class="table-scroll-box">\s*<div class="table-scroll-box">/g, '<div class="table-scroll-box">');
             cleaned = cleaned.replace(/<\/table><\/div>\s*<\/div>/g, '</table></div>');
-            // 3. Replace remaining newlines outside tables with <br>
             return cleaned.replace(/\n/g, "<br>");
         }
 
@@ -410,15 +417,17 @@
             document.getElementById('voice-page-modal').style.display = 'none';
         }
 
-        // === 3-STEP SELECTION & ALPHABET SEARCH LOGIC ===
+        // === 4-STEP SELECTION & ALPHABET SEARCH LOGIC ===
         let selectedSubject = localStorage.getItem('ai_subject') || "";
         let selectedCourse = localStorage.getItem('ai_course') || "";
         let selectedLang = localStorage.getItem('ai_lang') || "";
+        let selectedMode = localStorage.getItem('ai_mode') || "";
 
         function closeAllDropdowns() {
             document.getElementById("subjectDropdown").style.display = "none";
             document.getElementById("courseDropdown").style.display = "none";
             document.getElementById("langDropdown").style.display = "none";
+            document.getElementById("modeDropdown").style.display = "none";
         }
 
         function resetSubjectFilter() {
@@ -443,6 +452,13 @@
 
         function toggleLangList() {
             const el = document.getElementById("langDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function toggleModeList() {
+            const el = document.getElementById("modeDropdown");
             const isOpen = el.style.display === "block";
             closeAllDropdowns();
             el.style.display = isOpen ? "none" : "block";
@@ -478,6 +494,7 @@
             selectedSubject = sub;
             selectedCourse = "";
             selectedLang = "";
+            selectedMode = "";
             closeAllDropdowns();
             resetSubjectFilter();
 
@@ -489,6 +506,7 @@
 
             document.getElementById("courseTypeBtn").style.display = "inline-flex";
             document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("modeTypeBtn").style.display = "none";
             document.getElementById("courseDropdown").style.display = "block";
             updateLockState();
         }
@@ -496,6 +514,7 @@
         function chooseCourse(course) {
             selectedCourse = course;
             selectedLang = "";
+            selectedMode = "";
             closeAllDropdowns();
 
             document.getElementById("prompt").value = "";
@@ -503,21 +522,37 @@
             document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ <span style="color:#d97706;">(Select Language)</span>`;
 
             document.getElementById("langTypeBtn").style.display = "inline-flex";
+            document.getElementById("modeTypeBtn").style.display = "none";
             document.getElementById("langDropdown").style.display = "block";
             updateLockState();
         }
 
         function chooseLanguage(lang) {
             selectedLang = lang;
+            selectedMode = "";
             closeAllDropdowns();
 
             document.getElementById("prompt").value = "";
             document.getElementById("langTypeBtn").style.display = "none";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang}`;
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ <span style="color:#d97706;">(Select Notes/Q&A/Doubt)</span>`;
+
+            document.getElementById("modeTypeBtn").style.display = "inline-flex";
+            document.getElementById("modeDropdown").style.display = "block";
+            updateLockState();
+        }
+
+        function chooseMode(mode) {
+            selectedMode = mode;
+            closeAllDropdowns();
+
+            document.getElementById("prompt").value = "";
+            document.getElementById("modeTypeBtn").style.display = "none";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ 📝 ${selectedMode}`;
 
             localStorage.setItem('ai_subject', selectedSubject);
             localStorage.setItem('ai_course', selectedCourse);
             localStorage.setItem('ai_lang', selectedLang);
+            localStorage.setItem('ai_mode', selectedMode);
             updateLockState();
             document.getElementById("prompt").focus();
         }
@@ -526,23 +561,26 @@
             selectedSubject = "";
             selectedCourse = "";
             selectedLang = "";
+            selectedMode = "";
             localStorage.removeItem('ai_subject');
             localStorage.removeItem('ai_course');
             localStorage.removeItem('ai_lang');
+            localStorage.removeItem('ai_mode');
 
             closeAllDropdowns();
             resetSubjectFilter();
             document.getElementById("selectedBadge").style.display = "none";
             document.getElementById("courseTypeBtn").style.display = "none";
             document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("modeTypeBtn").style.display = "none";
             document.getElementById("mainSubjectBtn").style.display = "inline-flex";
             updateLockState();
         }
 
         function handleAttachClick() {
-            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "");
+            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
             if (!isUnlocked) {
-                alert("Please select Subject ➔ Honours/General ➔ Language before uploading a file!");
+                alert("Please select Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt before uploading a file!");
                 return;
             }
             document.getElementById('file_input').click();
@@ -553,12 +591,12 @@
             const sendBtn = document.getElementById("send-btn");
             const lockNotice = document.getElementById("lockNotice");
 
-            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "");
+            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
 
             sendBtn.disabled = !isUnlocked;
 
             if (isUnlocked) {
-                promptInput.placeholder = `Ask or upload syllabus for ${selectedSubject} (${selectedCourse} - ${selectedLang})...`;
+                promptInput.placeholder = `Ask for ${selectedMode} in ${selectedSubject} (${selectedCourse} - ${selectedLang})...`;
                 sendBtn.style.opacity = "1";
                 sendBtn.style.cursor = "pointer";
                 lockNotice.style.display = "none";
@@ -567,8 +605,10 @@
                     promptInput.placeholder = "Type subject name (e.g. Zoology) or select above...";
                 } else if (!selectedCourse) {
                     promptInput.placeholder = "Please select Honours or General above...";
-                } else {
+                } else if (!selectedLang) {
                     promptInput.placeholder = "Please select Language (Bengali / English) above...";
+                } else {
+                    promptInput.placeholder = "Please select Notes / Question Answer / Doubt Solve above...";
                 }
                 sendBtn.style.opacity = "0.35";
                 sendBtn.style.cursor = "not-allowed";
@@ -577,15 +617,14 @@
         }
 
         window.addEventListener("DOMContentLoaded", () => {
-            // Format existing chat messages & tables properly on load
             document.querySelectorAll('.raw-bot-msg').forEach(el => {
                 el.innerHTML = formatBotResponse(el.innerHTML);
             });
 
-            if (selectedSubject && selectedCourse && selectedLang) {
+            if (selectedSubject && selectedCourse && selectedLang && selectedMode) {
                 document.getElementById("mainSubjectBtn").style.display = "none";
                 document.getElementById("selectedBadge").style.display = "inline-flex";
-                document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang}`;
+                document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ 📝 ${selectedMode}`;
             }
             updateLockState();
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -742,8 +781,8 @@
             botMsgContent.style.fontStyle = "italic";
             
             let fullPrompt = newText;
-            if (selectedSubject && selectedCourse && selectedLang && !newText.startsWith("[Subject:")) {
-                fullPrompt = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang}] ${newText}`;
+            if (selectedSubject && selectedCourse && selectedLang && selectedMode && !newText.startsWith("[Subject:")) {
+                fullPrompt = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang} ➔ Mode: ${selectedMode}] ${newText}`;
             }
 
             const formData = new FormData();
@@ -770,8 +809,8 @@
         }
 
         async function sendMessage() {
-            if (!selectedSubject || !selectedCourse || !selectedLang) {
-                alert("Please select Subject ➔ Honours/General ➔ Language before sending a message!");
+            if (!selectedSubject || !selectedCourse || !selectedLang || !selectedMode) {
+                alert("Please select Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt before sending a message!");
                 return;
             }
 
@@ -783,8 +822,8 @@
             const file = fileInput.files[0];
             if (!prompt && !file) return;
 
-            const displayPrompt = `[${selectedSubject} ➔ ${selectedCourse} ➔ ${selectedLang}] ${prompt}`;
-            const fullPromptForAI = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang}] ${prompt}`;
+            const displayPrompt = `[${selectedSubject} ➔ ${selectedCourse} ➔ ${selectedLang} ➔ ${selectedMode}] ${prompt}`;
+            const fullPromptForAI = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang} ➔ Mode: ${selectedMode}] ${prompt}`;
 
             const tempId = "temp-" + Date.now();
             appendUserMessage(displayPrompt, file, tempId);
