@@ -5,47 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Notes</title>
     <style>
-        html, body { height: 100dvh; margin: 0; padding: 0; background-color: #ffffff; color: #333; font-family: -apple-system, sans-serif; overflow: hidden; }
-        #main-area { display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; overflow: hidden; }
-        
-        /* Fixed Top Header */
-        #header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-weight: bold; font-size: 18px; background: #fff; z-index: 1000; box-sizing: border-box;}
-        
-        .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; margin-right: 15px; }
-        .new-chat-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 5px; }
-        
-        #sidebar { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background-color: #f9f9f9; border-right: 1px solid #e5e5e5; transition: left 0.3s ease; z-index: 1001; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        * { box-sizing: border-box; }
+        html, body {
+            height: 100dvh;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        /* 1. FIXED TOP HEADER */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 58px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            font-weight: bold;
+            font-size: 18px;
+            background: #ffffff;
+            z-index: 1000;
+        }
+        .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; margin-right: 14px; }
+        .new-chat-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #333; padding: 5px; }
+
+        /* SIDEBAR */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: -265px;
+            width: 260px;
+            height: 100dvh;
+            background-color: #f9f9f9;
+            border-right: 1px solid #e5e5e5;
+            transition: left 0.3s ease;
+            z-index: 2001;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
         #sidebar.open { left: 0; }
         .close-sidebar { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 28px; cursor: pointer; color: #666; }
-        .sidebar-item { padding: 12px; border-radius: 8px; cursor: pointer; font-size: 15px; margin-bottom: 8px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
+        .sidebar-item { padding: 12px; border-radius: 8px; cursor: pointer; font-size: 15px; margin-bottom: 8px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .sidebar-item:hover { background: #e5e5e5; }
         .active-session { background: #e5e5e5; font-weight: bold; }
-        
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
+
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         #overlay.open { display: block; }
-        
-        /* Chat Box */
-        #chat-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 14px; display: flex; flex-direction: column; scroll-behavior: smooth; margin-top: 60px; box-sizing: border-box; }
-        .message-row { display: flex; gap: 10px; margin-bottom: 25px; width: 100%; box-sizing: border-box; }
+
+        /* 2. FIXED MIDDLE CHAT DISPLAY AREA */
+        #chat-box {
+            position: fixed;
+            top: 58px;
+            bottom: 135px; /* Automatically adjusted by JS to match footer height */
+            left: 0;
+            right: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
+            background: #ffffff;
+            z-index: 1;
+        }
+
+        .message-row { display: flex; gap: 10px; margin-bottom: 22px; width: 100%; align-items: flex-start; }
         .user-row { flex-direction: row-reverse; }
         .bot-row { flex-direction: row; }
-        
-        .avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0;}
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .message { max-width: calc(100% - 48px); min-width: 0; position: relative; display: flex; flex-direction: column;}
-        .user-msg { max-width: 78%; }
-        .bot-msg { width: 100%; }
-        .msg-content { padding: 12px 16px; border-radius: 12px; line-height: 1.55; font-size: 15px; word-wrap: break-word; overflow-wrap: break-word; }
-        .user-row .msg-content { background-color: #f3f3f3; border-top-right-radius: 4px; }
-        .bot-row .msg-content { background-color: transparent; padding: 8px 0; width: 100%; overflow: hidden; }
 
-        /* Disable any underline inside bot response */
+        .avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .message { min-width: 0; position: relative; display: flex; flex-direction: column; }
+        .user-msg { max-width: 78%; }
+        .bot-msg { width: calc(100% - 44px); max-width: 800px; }
+
+        .msg-content { padding: 12px 15px; border-radius: 12px; line-height: 1.55; font-size: 15px; word-wrap: break-word; overflow-wrap: break-word; }
+        .user-row .msg-content { background-color: #f3f3f3; border-top-right-radius: 4px; }
+        .bot-row .msg-content { background-color: transparent; padding: 4px 0; width: 100%; overflow: hidden; }
+
+        /* Remove any accidental underline inside bot response */
         .bot-row .msg-content u { text-decoration: none !important; }
 
-        /* === HORIZONTAL SCROLLABLE TABLE BOX === */
+        /* HORIZONTAL SCROLLABLE TABLE BOX */
         .table-scroll-box {
             width: 100%;
+            max-width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             margin: 10px 0;
@@ -53,10 +110,11 @@
             border-radius: 10px;
             background: #ffffff;
             box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            display: block;
         }
         .msg-content table {
             width: 100%;
-            min-width: 500px;
+            min-width: 480px;
             border-collapse: collapse;
             font-size: 14px;
             text-align: left;
@@ -75,86 +133,124 @@
             vertical-align: top;
             line-height: 1.45;
         }
-        .msg-content tr:nth-child(even) td {
-            background-color: #f8fafc;
-        }
-        
-        /* Message Footer & Icons */
-        .msg-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; color: #888; }
-        .msg-time { font-size: 11px; font-weight: 500;}
-        .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;}
-        .action-icon svg { width: 16px; height: 16px; fill: #888; transition: fill 0.2s; }
-        .action-icon:hover svg { fill: #000; }
-        
-        .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
-        
-        #input-container { flex: 0 0 auto; width: 100%; box-sizing: border-box; padding: 10px 15px 15px 15px; background: #fff; border-top: 1px solid #f0f0f0; z-index: 500; }
-        
-        /* === SELECTOR & LOCKED MODE BAR STYLES === */
-        .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 8px auto; box-sizing: border-box; }
-        .selector-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
-        .select-btn:hover { background: #eef7fa; }
-        
-        /* Scrollable Dropdown List */
-        .dropdown-menu-list { display: none; position: absolute; bottom: 100%; margin-bottom: 6px; left: 0; width: 250px; max-height: 210px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 1500; padding: 6px 0; }
-        .dropdown-item-opt { padding: 10px 15px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-        .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
-        
-        /* Temporary Selection Badge (while selecting steps 1-3) */
-        .selected-tag-box { display: none; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 5px 12px; border-radius: 18px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
+        .msg-content tr:nth-child(even) td { background-color: #f8fafc; }
 
-        /* Locked Chat Mode Switcher Bar (After all 4 are selected) */
-        #lockedModeBar {
-            display: none;
-            width: 100%;
-            flex-direction: column;
-            gap: 6px;
+        /* MESSAGE FOOTER & SMALL THIN DISCLAIMER */
+        .msg-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; color: #888; }
+        .msg-time { font-size: 11px; font-weight: 500; }
+        .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-icon svg { width: 15px; height: 15px; fill: #888; transition: fill 0.2s; }
+        .action-icon:hover svg { fill: #000; }
+
+        /* Small, thin disclaimer right under Like/Dislike/Copy/Restore */
+        .ai-disclaimer {
+            font-size: 10px;
+            font-weight: 300;
+            color: #9ca3af;
+            margin-top: 4px;
+            letter-spacing: 0.2px;
+            line-height: 1.2;
+            user-select: none;
         }
+
+        .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
+
+        /* 3. FIXED BOTTOM FOOTER MESSAGE SECTION */
+        #input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            padding: 8px 12px 12px 12px;
+            background: #ffffff;
+            border-top: 1px solid #e5e5e5;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+        }
+
+        .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 6px auto; }
+        .selector-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+
+        /* Scrollable Dropdown List */
+        .dropdown-menu-list { display: none; position: absolute; bottom: 100%; margin-bottom: 6px; left: 0; width: 245px; max-height: 200px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); z-index: 1500; padding: 6px 0; }
+        .dropdown-item-opt { padding: 10px 14px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
+
+        .selected-tag-box { display: none; align-items: center; gap: 5px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 4px 10px; border-radius: 16px; font-size: 12.5px; font-weight: 600; flex-wrap: wrap; }
+
+        /* Compact Locked Mode Bar */
+        #lockedModeBar { display: none; width: 100%; flex-direction: column; gap: 5px; }
         .locked-subject-info {
-            font-size: 12px;
+            font-size: 11.5px;
             color: #475569;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding-left: 4px;
+            white-space: nowrap;
+            overflow-x: auto;
+            padding-left: 2px;
         }
         .mode-Switch-group {
             display: flex;
             gap: 6px;
             align-items: center;
-            flex-wrap: wrap;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 2px;
         }
         .mode-pill-btn {
             background: #f1f5f9;
             border: 1.5px solid #cbd5e1;
             color: #334155;
-            padding: 6px 13px;
-            border-radius: 18px;
-            font-size: 13px;
+            padding: 5px 11px;
+            border-radius: 16px;
+            font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            flex-shrink: 0;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
         .mode-pill-btn.active-mode {
             background: #0D8ABC;
             border-color: #0D8ABC;
             color: #ffffff;
-            box-shadow: 0 2px 6px rgba(13, 138, 188, 0.3);
         }
 
-        .lock-warning { font-size: 12px; color: #d93025; margin-top: 5px; padding-left: 4px; font-weight: 600; line-height: 1.35; }
+        .lock-warning { font-size: 11.5px; color: #d93025; margin-top: 4px; padding-left: 4px; font-weight: 600; line-height: 1.3; }
 
-        #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; transition: opacity 0.2s; }
+        /* Message Form Wrapper */
+        #form-wrapper {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f4f4f4;
+            border-radius: 25px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .attach-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; color: #666; flex-shrink: 0; }
-        #prompt { flex: 1 1 auto; min-width: 0; width: 100%; border: none; outline: none; background: transparent; padding: 8px 4px; font-size: 15px; resize: none; max-height: 100px; height: 24px; line-height: 24px; font-family: inherit; }
-        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; transition: 0.2s;}
+        #prompt {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 6px 4px;
+            font-size: 15px;
+            resize: none;
+            max-height: 80px;
+            height: 24px;
+            line-height: 22px;
+            font-family: inherit;
+        }
+        .send-btn { background: #000; color: #fff; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
 
-        /* === ROUND VOICE ANIMATION BUTTON === */
+        /* ROUND VOICE ANIMATION BUTTON */
         .voice-anim-btn {
             background: linear-gradient(135deg, #0D8ABC, #2563eb);
             border: none;
@@ -168,14 +264,8 @@
             gap: 2.5px;
             flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-            position: relative;
         }
-        .voice-bar {
-            width: 2.5px;
-            background: #ffffff;
-            border-radius: 2px;
-            animation: voiceWave 1.1s infinite ease-in-out;
-        }
+        .voice-bar { width: 2.5px; background: #ffffff; border-radius: 2px; animation: voiceWave 1.1s infinite ease-in-out; }
         .voice-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
         .voice-bar:nth-child(2) { height: 15px; animation-delay: 0.2s; }
         .voice-bar:nth-child(3) { height: 11px; animation-delay: 0.4s; }
@@ -185,7 +275,7 @@
             50% { transform: scaleY(1.25); }
         }
 
-        /* === FULL SCREEN VOICE PAGE OVERLAY === */
+        /* FULL SCREEN VOICE PAGE OVERLAY */
         #voice-page-modal {
             display: none;
             position: fixed;
@@ -199,16 +289,9 @@
             align-items: center;
             justify-content: space-between;
             padding: 40px 20px;
-            box-sizing: border-box;
             color: #ffffff;
         }
-        .voice-orb-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: auto 0;
-        }
+        .voice-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: auto 0; }
         .voice-orb {
             width: 130px;
             height: 130px;
@@ -221,27 +304,14 @@
             0%, 100% { transform: scale(0.92); box-shadow: 0 0 35px rgba(56, 189, 248, 0.5); }
             50% { transform: scale(1.08); box-shadow: 0 0 75px rgba(236, 72, 153, 0.7); }
         }
-        .close-voice-page {
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 52px;
-            height: 52px;
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-        }
-        
+        .close-voice-page { background: #ef4444; color: white; border: none; border-radius: 50%; width: 52px; height: 52px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .btn-spinner { border: 2px solid transparent; border-top: 2px solid #fff; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         .typing-spinner { border: 2px solid #ccc; border-top-color: #000; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; }
-        
-        #image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; cursor: pointer;}
-        #modal-img { max-width: 90%; max-height: 90%; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);}
+
+        #image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2500; justify-content: center; align-items: center; cursor: pointer; }
+        #modal-img { max-width: 90%; max-height: 90%; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -250,7 +320,7 @@
         <img id="modal-img" src="">
     </div>
 
-    <!-- === VOICE PAGE MODAL === -->
+    <!-- VOICE PAGE MODAL -->
     <div id="voice-page-modal">
         <div style="font-size: 16px; font-weight: 600; opacity: 0.85;">AI Notes Voice Mode</div>
         <div class="voice-orb-container">
@@ -287,181 +357,203 @@
         </div>
     </div>
 
-    <div id="main-area">
-        <div id="header">
-            <div style="display: flex; align-items: center;">
-                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-                <span style="display: flex; align-items: center; gap: 8px;">
-                    <img src="/static/bot.png" style="width: 24px; height: 24px; border-radius: 5px;" alt="AI"> AI Notes
-                </span>
-            </div>
-            <button class="new-chat-btn" onclick="startNewChat()" title="New Chat for another Subject">➕</button>
+    <!-- 1. FIXED TOP HEADER -->
+    <div id="header">
+        <div style="display: flex; align-items: center;">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <span style="display: flex; align-items: center; gap: 8px;">
+                <img src="/static/bot.png" style="width: 24px; height: 24px; border-radius: 5px;" alt="AI"> AI Notes
+            </span>
         </div>
+        <button class="new-chat-btn" onclick="startNewChat()" title="New Chat">➕</button>
+    </div>
 
-        <div id="chat-box">
-            {% if history %}
-                {% for chat in history %}
-                    <!-- User Message -->
-                    <div class="message-row user-row" id="row-{{ chat.id }}">
-                        <div class="avatar"><img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true"></div>
-                        <div class="message user-msg">
-                            <div class="msg-content" id="msg-{{ chat.id }}">
-                                {% if chat.img_url %}
-                                    <img src="{{ chat.img_url }}" class="chat-image" onclick="openModal(this.src)"><br>
-                                {% endif %}
-                                <span class="text-content">{{ chat.user_msg }}</span>
-                            </div>
-                            <div class="msg-footer" style="justify-content: flex-end;">
-                                <span class="msg-time">Today</span>
-                                <button class="action-icon" id="edit-btn-{{ chat.id }}" onclick="startEdit('{{ chat.id }}')" title="Edit Message">
-                                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                                </button>
-                            </div>
+    <!-- 2. FIXED MIDDLE CHAT DISPLAY -->
+    <div id="chat-box">
+        {% if history %}
+            {% for chat in history %}
+                <!-- User Message -->
+                <div class="message-row user-row" id="row-{{ chat.id }}">
+                    <div class="avatar"><img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true"></div>
+                    <div class="message user-msg">
+                        <div class="msg-content" id="msg-{{ chat.id }}">
+                            {% if chat.img_url %}
+                                <img src="{{ chat.img_url }}" class="chat-image" onclick="openModal(this.src)"><br>
+                            {% endif %}
+                            <span class="text-content">{{ chat.user_msg }}</span>
+                        </div>
+                        <div class="msg-footer" style="justify-content: flex-end;">
+                            <span class="msg-time">Today</span>
+                            <button class="action-icon" id="edit-btn-{{ chat.id }}" onclick="startEdit('{{ chat.id }}')" title="Edit Message">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            </button>
                         </div>
                     </div>
-                    
-                    <!-- AI Message -->
-                    <div class="message-row bot-row" id="bot-row-{{ chat.id }}">
-                        <div class="avatar"><img src="/static/bot.png" style="border-radius: 5px;"></div>
-                        <div class="message bot-msg">
-                            <div class="msg-content raw-bot-msg">{{ chat.ai_msg | safe }}</div>
-                            <div class="msg-footer">
-                                <span class="msg-time">Today</span>
-                                <button class="action-icon" title="Good response"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
-                                <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
-                                <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
-                                <button class="action-icon" title="Regenerate response"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
-                            </div>
+                </div>
+                
+                <!-- AI Message (Isolated via template so unclosed tags never break layout) -->
+                <div class="message-row bot-row" id="bot-row-{{ chat.id }}">
+                    <div class="avatar"><img src="/static/bot.png" style="border-radius: 5px;"></div>
+                    <div class="message bot-msg">
+                        <div class="msg-content raw-bot-msg">{{ chat.ai_msg }}</div>
+                        <div class="msg-footer">
+                            <span class="msg-time">Today</span>
+                            <button class="action-icon" title="Good response"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
+                            <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
+                            <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
+                            <button class="action-icon" title="Regenerate response"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
                         </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-
-        <div id="input-container">
-            <!-- === 4-STEP INITIAL SELECTOR & PERMANENT LOCKED MODE BAR === -->
-            <div class="selector-wrapper">
-                <!-- 1. Subject List (Scrollable & Filterable by typing) -->
-                <div id="subjectDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt subject-opt" data-name="Zoology" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Botany" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Biochemistry" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Chemistry" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Physics" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Physiology" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Mathematics" onclick="chooseSubject('Mathematics')">📐 Mathematics <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Computer Science" onclick="chooseSubject('Computer Science')">💻 Computer Science <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="History" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Geography" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Political Science" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Philosophy" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Education" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Sanskrit" onclick="chooseSubject('Sanskrit')">📜 Sanskrit <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Bengali" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="English" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
-                    <div class="dropdown-item-opt subject-opt" data-name="Environmental Science" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
-                </div>
-
-                <!-- 2. Honours / General List -->
-                <div id="courseDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC <span>➔</span></div>
-                </div>
-
-                <!-- 3. Language List (Bengali / English) -->
-                <div id="langDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>➔</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>➔</span></div>
-                </div>
-
-                <!-- 4. Initial Mode List (Notes / Question Answer / Doubt Solve) -->
-                <div id="modeDropdown" class="dropdown-menu-list">
-                    <div class="dropdown-item-opt" onclick="chooseMode('Notes')">📝 Notes <span>✓</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseMode('Question Answer')">❓ Question Answer <span>✓</span></div>
-                    <div class="dropdown-item-opt" onclick="chooseMode('Doubt Solve')">💡 Doubt Solve <span>✓</span></div>
-                </div>
-
-                <!-- Initial Setup Bar (Shown only before all 4 are selected) -->
-                <div id="initialSetupBar" class="selector-bar">
-                    <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
-                        📚 Select Subject <span>▾</span>
-                    </button>
-
-                    <button type="button" id="courseTypeBtn" class="select-btn" style="display:none;" onclick="toggleCourseList()">
-                        🎓 Honours / General <span>▾</span>
-                    </button>
-
-                    <button type="button" id="langTypeBtn" class="select-btn" style="display:none;" onclick="toggleLangList()">
-                        🗣️ Language (Bengali / English) <span>▾</span>
-                    </button>
-
-                    <button type="button" id="modeTypeBtn" class="select-btn" style="display:none;" onclick="toggleModeList()">
-                        📝 Notes / Q&A / Doubt <span>▾</span>
-                    </button>
-
-                    <!-- Step progress indicator badge (No close button once locked) -->
-                    <div id="selectedBadge" class="selected-tag-box">
-                        <span id="badgeText"></span>
+                        <div class="ai-disclaimer">AI Notes is AI and can make mistakes.</div>
                     </div>
                 </div>
+            {% endfor %}
+        {% endif %}
+    </div>
 
-                <!-- LOCKED CHAT MODE BAR: Once selected, Subject/Course/Lang cannot be removed; only Notes / Q&A / Doubt Solve buttons remain -->
-                <div id="lockedModeBar">
-                    <div class="locked-subject-info" id="lockedInfoText"></div>
-                    <div class="mode-Switch-group">
-                        <button type="button" class="mode-pill-btn" id="pill-Notes" onclick="switchActiveMode('Notes')">📝 Notes</button>
-                        <button type="button" class="mode-pill-btn" id="pill-Question Answer" onclick="switchActiveMode('Question Answer')">❓ Question Answer</button>
-                        <button type="button" class="mode-pill-btn" id="pill-Doubt Solve" onclick="switchActiveMode('Doubt Solve')">💡 Doubt Solve</button>
-                    </div>
-                </div>
-
-                <div id="lockNotice" class="lock-warning">
-                    ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt</b> (or type subject name below) before sending a message.
-                </div>
+    <!-- 3. FIXED BOTTOM FOOTER MESSAGE SECTION -->
+    <div id="input-container">
+        <div class="selector-wrapper">
+            <!-- 1. Subject List -->
+            <div id="subjectDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt subject-opt" data-name="Zoology" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Botany" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Biochemistry" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Chemistry" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Physics" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Physiology" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Mathematics" onclick="chooseSubject('Mathematics')">📐 Mathematics <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Computer Science" onclick="chooseSubject('Computer Science')">💻 Computer Science <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="History" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Geography" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Political Science" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Philosophy" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Education" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Sanskrit" onclick="chooseSubject('Sanskrit')">📜 Sanskrit <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Bengali" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="English" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Environmental Science" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
             </div>
 
-            <div id="image-preview-container" style="display: none; position: relative; margin-bottom: 15px; width: fit-content; padding-left: 15px;">
-                <img id="image-preview" src="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #0D8ABC;">
-                <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
+            <!-- 2. Honours / General List -->
+            <div id="courseDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours <span>➔</span></div>
+                <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC <span>➔</span></div>
             </div>
-            
-            <div id="form-wrapper">
-                <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
-                <button class="attach-btn" id="attach-btn" type="button" onclick="handleAttachClick()">📎</button>
-                <textarea id="prompt" placeholder="Type subject name (e.g. Zoology) or select above..." oninput="handlePromptTyping(this.value)"></textarea>
-                
-                <!-- Send Button -->
-                <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()" title="Send Message">↑</button>
-                
-                <!-- Round Voice Animation Button -->
-                <button class="voice-anim-btn" id="voice-btn" type="button" onclick="openVoicePage()" title="Open Voice Mode">
-                    <span class="voice-bar"></span>
-                    <span class="voice-bar"></span>
-                    <span class="voice-bar"></span>
-                    <span class="voice-bar"></span>
+
+            <!-- 3. Language List -->
+            <div id="langDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>➔</span></div>
+                <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>➔</span></div>
+            </div>
+
+            <!-- 4. Mode List -->
+            <div id="modeDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt" onclick="chooseMode('Notes')">📝 Notes <span>✓</span></div>
+                <div class="dropdown-item-opt" onclick="chooseMode('Question Answer')">❓ Question Answer <span>✓</span></div>
+                <div class="dropdown-item-opt" onclick="chooseMode('Doubt Solve')">💡 Doubt Solve <span>✓</span></div>
+            </div>
+
+            <!-- Initial Setup Bar -->
+            <div id="initialSetupBar" class="selector-bar">
+                <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
+                    📚 Select Subject <span>▾</span>
                 </button>
+
+                <button type="button" id="courseTypeBtn" class="select-btn" style="display:none;" onclick="toggleCourseList()">
+                    🎓 Honours / General <span>▾</span>
+                </button>
+
+                <button type="button" id="langTypeBtn" class="select-btn" style="display:none;" onclick="toggleLangList()">
+                    🗣️ Language (Bengali / English) <span>▾</span>
+                </button>
+
+                <button type="button" id="modeTypeBtn" class="select-btn" style="display:none;" onclick="toggleModeList()">
+                    📝 Notes / Q&A / Doubt <span>▾</span>
+                </button>
+
+                <div id="selectedBadge" class="selected-tag-box">
+                    <span id="badgeText"></span>
+                </div>
             </div>
+
+            <!-- Locked Chat Mode Switcher Bar -->
+            <div id="lockedModeBar">
+                <div class="locked-subject-info" id="lockedInfoText"></div>
+                <div class="mode-Switch-group">
+                    <button type="button" class="mode-pill-btn" id="pill-Notes" onclick="switchActiveMode('Notes')">📝 Notes</button>
+                    <button type="button" class="mode-pill-btn" id="pill-Question Answer" onclick="switchActiveMode('Question Answer')">❓ Question Answer</button>
+                    <button type="button" class="mode-pill-btn" id="pill-Doubt Solve" onclick="switchActiveMode('Doubt Solve')">💡 Doubt Solve</button>
+                </div>
+            </div>
+
+            <div id="lockNotice" class="lock-warning">
+                ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt</b> before sending a message.
+            </div>
+        </div>
+
+        <div id="image-preview-container" style="display: none; position: relative; margin-bottom: 10px; width: fit-content; padding-left: 10px;">
+            <img id="image-preview" src="" style="width: 68px; height: 68px; object-fit: cover; border-radius: 8px; border: 2px solid #0D8ABC;">
+            <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
+        </div>
+        
+        <div id="form-wrapper">
+            <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
+            <button class="attach-btn" id="attach-btn" type="button" onclick="handleAttachClick()">📎</button>
+            <textarea id="prompt" placeholder="Type subject name (e.g. Zoology) or select above..." oninput="handlePromptTyping(this.value)"></textarea>
+            
+            <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()" title="Send Message">↑</button>
+            
+            <button class="voice-anim-btn" id="voice-btn" type="button" onclick="openVoicePage()" title="Open Voice Mode">
+                <span class="voice-bar"></span>
+                <span class="voice-bar"></span>
+                <span class="voice-bar"></span>
+                <span class="voice-bar"></span>
+            </button>
         </div>
     </div>
 
     <script>
         const chatBox = document.getElementById('chat-box');
-        let currentSessionId = "{{ current_session }}"; 
+        const inputContainer = document.getElementById('input-container');
+        let currentSessionId = "{{ current_session }}";
 
-        // Safely format AI response: Removes <u> underlines, prevents <br> inside tables, and wraps tables in a horizontal scroll box
-        function formatBotResponse(htmlText) {
-            if (!htmlText) return "";
-            let cleaned = htmlText.replace(/<\/?u>/gi, "");
+        // Dynamically keep #chat-box bottom aligned with fixed #input-container height
+        function syncChatBoxBottom() {
+            if (inputContainer && chatBox) {
+                chatBox.style.bottom = inputContainer.offsetHeight + 'px';
+            }
+        }
+        if (window.ResizeObserver) {
+            new ResizeObserver(syncChatBoxBottom).observe(inputContainer);
+        }
+        window.addEventListener('resize', syncChatBoxBottom);
+
+        // Safely format AI response & auto-close any truncated/unclosed HTML tags so layout NEVER breaks
+        function formatBotResponse(rawText) {
+            if (!rawText) return "";
+            let cleaned = rawText.replace(/<\/?u>/gi, "");
+
+            // If AI output was truncated mid-table without closing </table>, close it automatically
+            const openTables = (cleaned.match(/<table/gi) || []).length;
+            const closeTables = (cleaned.match(/<\/table>/gi) || []).length;
+            if (openTables > closeTables) {
+                cleaned += "</td></tr></tbody></table></div>";
+            }
+
             cleaned = cleaned.replace(/<table[\s\S]*?<\/table>/gi, function(tableMatch) {
                 let compactTable = tableMatch.replace(/\r?\n/g, " ");
                 return `<div class="table-scroll-box">${compactTable}</div>`;
             });
             cleaned = cleaned.replace(/<div class="table-scroll-box">\s*<div class="table-scroll-box">/g, '<div class="table-scroll-box">');
             cleaned = cleaned.replace(/<\/table><\/div>\s*<\/div>/g, '</table></div>');
-            return cleaned.replace(/\n/g, "<br>");
+            cleaned = cleaned.replace(/\n/g, "<br>");
+
+            // Parse inside isolated detached DOM element so any unclosed tags are auto-closed by browser
+            const safeIsolator = document.createElement('div');
+            safeIsolator.innerHTML = cleaned;
+            return safeIsolator.innerHTML;
         }
 
-        // === VOICE PAGE FUNCTIONS ===
         function openVoicePage() {
             document.getElementById('voice-page-modal').style.display = 'flex';
         }
@@ -475,7 +567,6 @@
         let selectedLang = "";
         let selectedMode = "";
 
-        // Start a brand new chat (for selecting a different Subject / Course / Language)
         function startNewChat() {
             sessionStorage.removeItem('new_chat_selection');
             window.location.href = '/';
@@ -489,8 +580,7 @@
         }
 
         function resetSubjectFilter() {
-            const items = document.querySelectorAll('.subject-opt');
-            items.forEach(item => item.style.display = 'flex');
+            document.querySelectorAll('.subject-opt').forEach(item => item.style.display = 'flex');
         }
 
         function toggleSubjectList() {
@@ -522,10 +612,8 @@
             el.style.display = isOpen ? "none" : "block";
         }
 
-        // Type alphabet in message box to search & filter Subject (only before subject is chosen)
         function handlePromptTyping(val) {
             const query = val.trim().toLowerCase();
-
             if (!selectedSubject) {
                 const dropdown = document.getElementById("subjectDropdown");
                 const items = document.querySelectorAll('.subject-opt');
@@ -557,7 +645,6 @@
             resetSubjectFilter();
 
             document.getElementById("prompt").value = "";
-
             document.getElementById("mainSubjectBtn").style.display = "none";
             document.getElementById("selectedBadge").style.display = "inline-flex";
             document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Select Honours/General)</span>`;
@@ -592,14 +679,13 @@
 
             document.getElementById("prompt").value = "";
             document.getElementById("langTypeBtn").style.display = "none";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ <span style="color:#d97706;">(Select Notes/Q&A/Doubt)</span>`;
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ <span style="color:#d97706;">(Select Mode)</span>`;
 
             document.getElementById("modeTypeBtn").style.display = "inline-flex";
             document.getElementById("modeDropdown").style.display = "block";
             updateLockState();
         }
 
-        // Step 4: Once Mode is chosen, lock Subject/Course/Language for this chat and show only Mode switcher!
         function chooseMode(mode) {
             selectedMode = mode;
             closeAllDropdowns();
@@ -610,7 +696,6 @@
             document.getElementById("prompt").focus();
         }
 
-        // Switch between Notes, Question Answer, and Doubt Solve inside the locked chat
         function switchActiveMode(mode) {
             selectedMode = mode;
             saveSessionSelection();
@@ -623,17 +708,17 @@
             document.getElementById("prompt").focus();
         }
 
-        // Permanently lock the chat to the chosen Subject, Course, and Language (no close button)
         function activateLockedChatMode() {
             document.getElementById("initialSetupBar").style.display = "none";
             document.getElementById("lockedModeBar").style.display = "flex";
-            document.getElementById("lockedInfoText").innerHTML = `🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b> <span style="color:#888; font-weight:normal;">(Take ➕ New Chat for another subject)</span>`;
+            document.getElementById("lockedInfoText").innerHTML = `🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b> <span style="color:#888; font-weight:normal;">(➕ New Chat for other subject)</span>`;
 
             document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
             const activeBtn = document.getElementById(`pill-${selectedMode}`);
             if (activeBtn) activeBtn.classList.add('active-mode');
 
             updateLockState();
+            syncChatBoxBottom();
         }
 
         function saveSessionSelection() {
@@ -665,11 +750,10 @@
             const lockNotice = document.getElementById("lockNotice");
 
             const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
-
             sendBtn.disabled = !isUnlocked;
 
             if (isUnlocked) {
-                promptInput.placeholder = `Message for ${selectedMode} (${selectedSubject} - ${selectedCourse})...`;
+                promptInput.placeholder = `Message for ${selectedMode} (${selectedSubject})...`;
                 sendBtn.style.opacity = "1";
                 sendBtn.style.cursor = "pointer";
                 lockNotice.style.display = "none";
@@ -687,17 +771,17 @@
                 sendBtn.style.cursor = "not-allowed";
                 lockNotice.style.display = "block";
             }
+            syncChatBoxBottom();
         }
 
-        // Restore locked Subject, Course, Language & Mode when opening an existing chat session
         window.addEventListener("DOMContentLoaded", () => {
+            // Safely render escaped bot messages so unclosed tags never leak out
             document.querySelectorAll('.raw-bot-msg').forEach(el => {
-                el.innerHTML = formatBotResponse(el.innerHTML);
+                const rawContent = el.textContent;
+                el.innerHTML = formatBotResponse(rawContent);
             });
 
             let restored = false;
-
-            // 1. If opening an existing session, check localStorage or parse from first message in chat history
             if (currentSessionId && currentSessionId !== "None") {
                 const saved = localStorage.getItem('chat_lock_' + currentSessionId);
                 if (saved) {
@@ -711,7 +795,6 @@
                     } catch (e) {}
                 }
 
-                // Fallback: Read from the first user message in history if opened on another device
                 if (!restored) {
                     const firstUserTextEl = document.querySelector('.user-msg .text-content');
                     if (firstUserTextEl) {
@@ -742,15 +825,14 @@
                 updateLockState();
             }
 
+            syncChatBoxBottom();
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
-        // Get Current Time nicely formatted
         function getCurrentTime() {
             return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         }
 
-        // Add Copy Function
         function copyText(btn) {
             const content = btn.closest('.message').querySelector('.msg-content').innerText;
             navigator.clipboard.writeText(content);
@@ -775,15 +857,18 @@
                 reader.onload = function(e) {
                     previewImg.src = e.target.result;
                     previewContainer.style.display = 'block';
+                    syncChatBoxBottom();
                 }
                 reader.readAsDataURL(file);
             } else {
                 previewContainer.style.display = 'none';
+                syncChatBoxBottom();
             }
         }
         function clearImagePreview() {
             document.getElementById('file_input').value = '';
             document.getElementById('image-preview-container').style.display = 'none';
+            syncChatBoxBottom();
         }
 
         function openModal(imgSrc) {
@@ -848,7 +933,8 @@
                 <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
                 <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
                 <button class="action-icon" title="Regenerate"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
-            </div>`;
+            </div>
+            <div class="ai-disclaimer" id="disc-${msgId}" style="display:none;">AI Notes is AI and can make mistakes.</div>`;
 
             rowDiv.appendChild(avatarDiv);
             rowDiv.appendChild(msgDiv);
@@ -965,6 +1051,7 @@
                 
                 const botMsgContent = document.querySelector(`#bot-row-${tempId} .msg-content`);
                 const botMsgFooter = document.getElementById(`footer-${tempId}`);
+                const botMsgDisc = document.getElementById(`disc-${tempId}`);
                 
                 if(data.error) {
                     botMsgContent.innerHTML = "Error: " + data.error;
@@ -979,6 +1066,10 @@
                     
                     botMsgFooter.id = `footer-${data.msg_id}`;
                     botMsgFooter.style.display = "flex";
+                    if (botMsgDisc) {
+                        botMsgDisc.id = `disc-${data.msg_id}`;
+                        botMsgDisc.style.display = "block";
+                    }
                     
                     botMsgContent.innerHTML = formatBotResponse(data.response);
                     botMsgContent.style.color = "inherit";
