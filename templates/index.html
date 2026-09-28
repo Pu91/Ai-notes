@@ -8,7 +8,7 @@
         html, body { height: 100dvh; margin: 0; padding: 0; background-color: #ffffff; color: #333; font-family: -apple-system, sans-serif; overflow: hidden; }
         #main-area { display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; overflow: hidden; }
         
-        /* Updated Header - Fixed Top */
+        /* Fixed Top Header */
         #header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-weight: bold; font-size: 18px; background: #fff; z-index: 1000; box-sizing: border-box;}
         
         .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; margin-right: 15px; }
@@ -24,7 +24,7 @@
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 900; }
         #overlay.open { display: block; }
         
-        /* Chat Box adjusted for fixed header & constrained so tables never push input box out */
+        /* Chat Box */
         #chat-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 14px; display: flex; flex-direction: column; scroll-behavior: smooth; margin-top: 60px; box-sizing: border-box; }
         .message-row { display: flex; gap: 10px; margin-bottom: 25px; width: 100%; box-sizing: border-box; }
         .user-row { flex-direction: row-reverse; }
@@ -79,7 +79,7 @@
             background-color: #f8fafc;
         }
         
-        /* New Icons & Time Design */
+        /* Message Footer & Icons */
         .msg-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; color: #888; }
         .msg-time { font-size: 11px; font-weight: 500;}
         .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;}
@@ -90,7 +90,7 @@
         
         #input-container { flex: 0 0 auto; width: 100%; box-sizing: border-box; padding: 10px 15px 15px 15px; background: #fff; border-top: 1px solid #f0f0f0; z-index: 500; }
         
-        /* === 4-STEP SELECTOR STYLES === */
+        /* === SELECTOR & LOCKED MODE BAR STYLES === */
         .selector-wrapper { position: relative; width: 100%; max-width: 800px; margin: 0 auto 8px auto; box-sizing: border-box; }
         .selector-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .select-btn { background: #ffffff; border: 1.5px solid #0D8ABC; color: #0D8ABC; padding: 6px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
@@ -101,9 +101,52 @@
         .dropdown-item-opt { padding: 10px 15px; font-size: 14px; color: #1e293b; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
         
-        /* Arrow Badge above Message Box */
+        /* Temporary Selection Badge (while selecting steps 1-3) */
         .selected-tag-box { display: none; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 5px 12px; border-radius: 18px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
-        .close-tag-btn { background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 13px; line-height: 18px; text-align: center; cursor: pointer; margin-left: 4px; font-weight: bold; }
+
+        /* Locked Chat Mode Switcher Bar (After all 4 are selected) */
+        #lockedModeBar {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .locked-subject-info {
+            font-size: 12px;
+            color: #475569;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding-left: 4px;
+        }
+        .mode-Switch-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .mode-pill-btn {
+            background: #f1f5f9;
+            border: 1.5px solid #cbd5e1;
+            color: #334155;
+            padding: 6px 13px;
+            border-radius: 18px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .mode-pill-btn.active-mode {
+            background: #0D8ABC;
+            border-color: #0D8ABC;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(13, 138, 188, 0.3);
+        }
+
         .lock-warning { font-size: 12px; color: #d93025; margin-top: 5px; padding-left: 4px; font-weight: 600; line-height: 1.35; }
 
         #form-wrapper { width: 100%; max-width: 800px; margin: 0 auto; background: #f4f4f4; border-radius: 24px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; box-sizing: border-box; transition: opacity 0.2s; }
@@ -225,7 +268,7 @@
         <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 20px; margin-bottom: 25px; margin-top: 5px;">
             <img src="/static/bot.png" style="width: 30px; height: 30px; border-radius: 5px;"> AI Notes
         </div>
-        <div class="sidebar-item" onclick="window.location.href='/'" style="background: #eef2f5; font-weight: bold; color: #0D8ABC;">➕ New Chat</div>
+        <div class="sidebar-item" onclick="startNewChat()" style="background: #eef2f5; font-weight: bold; color: #0D8ABC;">➕ New Chat</div>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
         <div style="font-size: 12px; color: #888; font-weight: bold; padding-left: 10px; margin-bottom: 10px;">Chat History</div>
         
@@ -252,7 +295,7 @@
                     <img src="/static/bot.png" style="width: 24px; height: 24px; border-radius: 5px;" alt="AI"> AI Notes
                 </span>
             </div>
-            <button class="new-chat-btn" onclick="window.location.href='/'">➕</button>
+            <button class="new-chat-btn" onclick="startNewChat()" title="New Chat for another Subject">➕</button>
         </div>
 
         <div id="chat-box">
@@ -296,7 +339,7 @@
         </div>
 
         <div id="input-container">
-            <!-- === 4-STEP SELECTOR: SUBJECT ➔ HONOURS/GENERAL ➔ LANGUAGE ➔ MODE === -->
+            <!-- === 4-STEP INITIAL SELECTOR & PERMANENT LOCKED MODE BAR === -->
             <div class="selector-wrapper">
                 <!-- 1. Subject List (Scrollable & Filterable by typing) -->
                 <div id="subjectDropdown" class="dropdown-menu-list">
@@ -331,15 +374,15 @@
                     <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>➔</span></div>
                 </div>
 
-                <!-- 4. Mode List (Notes / Question Answer / Doubt Solve) -->
+                <!-- 4. Initial Mode List (Notes / Question Answer / Doubt Solve) -->
                 <div id="modeDropdown" class="dropdown-menu-list">
                     <div class="dropdown-item-opt" onclick="chooseMode('Notes')">📝 Notes <span>✓</span></div>
                     <div class="dropdown-item-opt" onclick="chooseMode('Question Answer')">❓ Question Answer <span>✓</span></div>
                     <div class="dropdown-item-opt" onclick="chooseMode('Doubt Solve')">💡 Doubt Solve <span>✓</span></div>
                 </div>
 
-                <!-- Buttons & Active Selection Badge -->
-                <div class="selector-bar">
+                <!-- Initial Setup Bar (Shown only before all 4 are selected) -->
+                <div id="initialSetupBar" class="selector-bar">
                     <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
                         📚 Select Subject <span>▾</span>
                     </button>
@@ -356,10 +399,19 @@
                         📝 Notes / Q&A / Doubt <span>▾</span>
                     </button>
 
-                    <!-- Arrow Badge above Message Box -->
+                    <!-- Step progress indicator badge (No close button once locked) -->
                     <div id="selectedBadge" class="selected-tag-box">
                         <span id="badgeText"></span>
-                        <button type="button" class="close-tag-btn" onclick="resetSelection()" title="Remove Selection">×</button>
+                    </div>
+                </div>
+
+                <!-- LOCKED CHAT MODE BAR: Once selected, Subject/Course/Lang cannot be removed; only Notes / Q&A / Doubt Solve buttons remain -->
+                <div id="lockedModeBar">
+                    <div class="locked-subject-info" id="lockedInfoText"></div>
+                    <div class="mode-Switch-group">
+                        <button type="button" class="mode-pill-btn" id="pill-Notes" onclick="switchActiveMode('Notes')">📝 Notes</button>
+                        <button type="button" class="mode-pill-btn" id="pill-Question Answer" onclick="switchActiveMode('Question Answer')">❓ Question Answer</button>
+                        <button type="button" class="mode-pill-btn" id="pill-Doubt Solve" onclick="switchActiveMode('Doubt Solve')">💡 Doubt Solve</button>
                     </div>
                 </div>
 
@@ -417,11 +469,17 @@
             document.getElementById('voice-page-modal').style.display = 'none';
         }
 
-        // === 4-STEP SELECTION & ALPHABET SEARCH LOGIC ===
-        let selectedSubject = localStorage.getItem('ai_subject') || "";
-        let selectedCourse = localStorage.getItem('ai_course') || "";
-        let selectedLang = localStorage.getItem('ai_lang') || "";
-        let selectedMode = localStorage.getItem('ai_mode') || "";
+        // === SESSION-LOCKED SELECTION LOGIC ===
+        let selectedSubject = "";
+        let selectedCourse = "";
+        let selectedLang = "";
+        let selectedMode = "";
+
+        // Start a brand new chat (for selecting a different Subject / Course / Language)
+        function startNewChat() {
+            sessionStorage.removeItem('new_chat_selection');
+            window.location.href = '/';
+        }
 
         function closeAllDropdowns() {
             document.getElementById("subjectDropdown").style.display = "none";
@@ -464,7 +522,7 @@
             el.style.display = isOpen ? "none" : "block";
         }
 
-        // Type alphabet in message box to search & filter Subject
+        // Type alphabet in message box to search & filter Subject (only before subject is chosen)
         function handlePromptTyping(val) {
             const query = val.trim().toLowerCase();
 
@@ -541,40 +599,55 @@
             updateLockState();
         }
 
+        // Step 4: Once Mode is chosen, lock Subject/Course/Language for this chat and show only Mode switcher!
         function chooseMode(mode) {
             selectedMode = mode;
             closeAllDropdowns();
-
             document.getElementById("prompt").value = "";
-            document.getElementById("modeTypeBtn").style.display = "none";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ 📝 ${selectedMode}`;
 
-            localStorage.setItem('ai_subject', selectedSubject);
-            localStorage.setItem('ai_course', selectedCourse);
-            localStorage.setItem('ai_lang', selectedLang);
-            localStorage.setItem('ai_mode', selectedMode);
+            saveSessionSelection();
+            activateLockedChatMode();
+            document.getElementById("prompt").focus();
+        }
+
+        // Switch between Notes, Question Answer, and Doubt Solve inside the locked chat
+        function switchActiveMode(mode) {
+            selectedMode = mode;
+            saveSessionSelection();
+
+            document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
+            const activeBtn = document.getElementById(`pill-${mode}`);
+            if (activeBtn) activeBtn.classList.add('active-mode');
+
             updateLockState();
             document.getElementById("prompt").focus();
         }
 
-        function resetSelection() {
-            selectedSubject = "";
-            selectedCourse = "";
-            selectedLang = "";
-            selectedMode = "";
-            localStorage.removeItem('ai_subject');
-            localStorage.removeItem('ai_course');
-            localStorage.removeItem('ai_lang');
-            localStorage.removeItem('ai_mode');
+        // Permanently lock the chat to the chosen Subject, Course, and Language (no close button)
+        function activateLockedChatMode() {
+            document.getElementById("initialSetupBar").style.display = "none";
+            document.getElementById("lockedModeBar").style.display = "flex";
+            document.getElementById("lockedInfoText").innerHTML = `🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b> <span style="color:#888; font-weight:normal;">(Take ➕ New Chat for another subject)</span>`;
 
-            closeAllDropdowns();
-            resetSubjectFilter();
-            document.getElementById("selectedBadge").style.display = "none";
-            document.getElementById("courseTypeBtn").style.display = "none";
-            document.getElementById("langTypeBtn").style.display = "none";
-            document.getElementById("modeTypeBtn").style.display = "none";
-            document.getElementById("mainSubjectBtn").style.display = "inline-flex";
+            document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
+            const activeBtn = document.getElementById(`pill-${selectedMode}`);
+            if (activeBtn) activeBtn.classList.add('active-mode');
+
             updateLockState();
+        }
+
+        function saveSessionSelection() {
+            const data = JSON.stringify({
+                subject: selectedSubject,
+                course: selectedCourse,
+                lang: selectedLang,
+                mode: selectedMode
+            });
+            if (currentSessionId && currentSessionId !== "None") {
+                localStorage.setItem('chat_lock_' + currentSessionId, data);
+            } else {
+                sessionStorage.setItem('new_chat_selection', data);
+            }
         }
 
         function handleAttachClick() {
@@ -596,7 +669,7 @@
             sendBtn.disabled = !isUnlocked;
 
             if (isUnlocked) {
-                promptInput.placeholder = `Ask for ${selectedMode} in ${selectedSubject} (${selectedCourse} - ${selectedLang})...`;
+                promptInput.placeholder = `Message for ${selectedMode} (${selectedSubject} - ${selectedCourse})...`;
                 sendBtn.style.opacity = "1";
                 sendBtn.style.cursor = "pointer";
                 lockNotice.style.display = "none";
@@ -616,17 +689,59 @@
             }
         }
 
+        // Restore locked Subject, Course, Language & Mode when opening an existing chat session
         window.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll('.raw-bot-msg').forEach(el => {
                 el.innerHTML = formatBotResponse(el.innerHTML);
             });
 
-            if (selectedSubject && selectedCourse && selectedLang && selectedMode) {
-                document.getElementById("mainSubjectBtn").style.display = "none";
-                document.getElementById("selectedBadge").style.display = "inline-flex";
-                document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ 📝 ${selectedMode}`;
+            let restored = false;
+
+            // 1. If opening an existing session, check localStorage or parse from first message in chat history
+            if (currentSessionId && currentSessionId !== "None") {
+                const saved = localStorage.getItem('chat_lock_' + currentSessionId);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        selectedSubject = parsed.subject;
+                        selectedCourse = parsed.course;
+                        selectedLang = parsed.lang;
+                        selectedMode = parsed.mode || "Notes";
+                        restored = true;
+                    } catch (e) {}
+                }
+
+                // Fallback: Read from the first user message in history if opened on another device
+                if (!restored) {
+                    const firstUserTextEl = document.querySelector('.user-msg .text-content');
+                    if (firstUserTextEl) {
+                        const txt = firstUserTextEl.innerText;
+                        const match4 = txt.match(/\[(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\]/);
+                        const match3 = txt.match(/\[(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\]/);
+                        if (match4) {
+                            selectedSubject = match4[1].replace(/Subject:\s*/i, '').trim();
+                            selectedCourse = match4[2].replace(/Course:\s*/i, '').trim();
+                            selectedLang = match4[3].replace(/Language:\s*/i, '').trim();
+                            selectedMode = match4[4].replace(/Mode:\s*/i, '').trim();
+                            restored = true;
+                        } else if (match3) {
+                            selectedSubject = match3[1].replace(/Subject:\s*/i, '').trim();
+                            selectedCourse = match3[2].replace(/Course:\s*/i, '').trim();
+                            selectedLang = match3[3].replace(/Language:\s*/i, '').trim();
+                            selectedMode = "Notes";
+                            restored = true;
+                        }
+                    }
+                }
             }
-            updateLockState();
+
+            if (restored && selectedSubject && selectedCourse && selectedLang) {
+                saveSessionSelection();
+                activateLockedChatMode();
+            } else {
+                updateLockState();
+            }
+
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
@@ -872,6 +987,7 @@
                     
                     if (currentSessionId === "None" || !currentSessionId) {
                         currentSessionId = data.session_id;
+                        saveSessionSelection();
                         window.history.pushState(null, '', '/?session_id=' + data.session_id);
                         setTimeout(() => location.reload(), 2500); 
                     }
