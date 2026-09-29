@@ -166,16 +166,8 @@
             gap: 9px;
             line-height: 1.45;
         }
-        .check-icon {
-            color: #16a34a;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-        .cross-icon {
-            color: #94a3b8;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
+        .check-icon { color: #16a34a; font-weight: bold; flex-shrink: 0; }
+        .cross-icon { color: #94a3b8; font-weight: bold; flex-shrink: 0; }
 
         .plan-btn {
             width: 100%;
@@ -188,11 +180,7 @@
             text-align: center;
             transition: 0.2s;
         }
-        .free-btn {
-            background: #e2e8f0;
-            color: #475569;
-            cursor: default;
-        }
+        .free-btn { background: #e2e8f0; color: #475569; cursor: default; }
         .upgrade-btn {
             background: linear-gradient(90deg, #ff8a00, #e52e71);
             color: #ffffff;
@@ -200,7 +188,7 @@
         }
         .upgrade-btn:hover { opacity: 0.93; }
 
-        /* Payment Popup Modal */
+        /* === UPI QR SCANNER & TIMER GATEWAY MODAL === */
         #payment-modal {
             display: none;
             position: fixed;
@@ -208,51 +196,165 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(15, 23, 42, 0.72);
             z-index: 1000;
             align-items: center;
             justify-content: center;
-            padding: 18px;
+            padding: 14px;
+            overflow-y: auto;
         }
-        .modal-box {
+        .gateway-card {
             background: #ffffff;
             width: 100%;
-            max-width: 380px;
-            border-radius: 18px;
-            padding: 24px 20px;
-            text-align: center;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            max-width: 390px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            animation: popIn 0.2s ease-out;
         }
-        .modal-box h3 {
-            margin: 0 0 8px 0;
-            font-size: 20px;
-            color: #0f172a;
+        @keyframes popIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
-        .modal-box p {
-            font-size: 14px;
-            color: #475569;
-            line-height: 1.5;
-            margin-bottom: 18px;
+
+        .gateway-header {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: #ffffff;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .user-info-box {
-            background: #f1f5f9;
-            padding: 10px;
+        .gateway-header-left {
+            display: flex;
+            flex-direction: column;
+        }
+        .gateway-title { font-size: 16px; font-weight: 700; }
+        .gateway-sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        .gateway-amount {
+            background: #22c55e;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 18px;
+            padding: 6px 12px;
             border-radius: 10px;
-            font-size: 13.5px;
-            color: #0f172a;
-            margin-bottom: 18px;
-            word-break: break-all;
         }
-        .close-modal-btn {
+
+        .gateway-body {
+            padding: 18px 20px 20px 20px;
+            text-align: center;
+        }
+
+        /* Live Countdown Timer Pill */
+        .timer-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        /* QR Scanner Box */
+        .qr-frame {
+            width: 190px;
+            height: 190px;
+            margin: 0 auto 10px auto;
+            padding: 10px;
+            border: 2px dashed #0D8ABC;
+            border-radius: 16px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .qr-frame img {
             width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .upi-apps-line {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .upi-app-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 10px;
+            background: #eff6ff;
+            border: 1.5px solid #3b82f6;
+            color: #1d4ed8;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            margin-bottom: 14px;
+        }
+
+        /* UTR Verification Input */
+        .utr-box {
+            text-align: left;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 14px;
+        }
+        .utr-box label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+        .utr-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .utr-input:focus { border-color: #0D8ABC; }
+
+        .gateway-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .cancel-pay-btn {
+            flex: 1;
             padding: 11px;
-            background: #0D8ABC;
+            background: #e2e8f0;
+            color: #334155;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .verify-pay-btn {
+            flex: 2;
+            padding: 11px;
+            background: linear-gradient(90deg, #16a34a, #15803d);
             color: #ffffff;
             border: none;
             border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 14.5px;
+            font-weight: 700;
             cursor: pointer;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
         }
     </style>
 </head>
@@ -307,26 +409,125 @@
         </div>
     </div>
 
-    <!-- Payment Modal -->
-    <div id="payment-modal" onclick="if(event.target===this) closePaymentModal()">
-        <div class="modal-box">
-            <h3>⭐ Upgrade to Plus</h3>
-            <p>To activate <b>AI Notes Plus (₹49/month)</b> on your account, please complete the payment for your registered email:</p>
-            <div class="user-info-box">
-                👤 Account: <b>{{ session.get('user', 'Your Account') }}</b>
+    <!-- === OWN UPI QR SCANNER & COUNTDOWN TIMER MODAL === -->
+    <div id="payment-modal">
+        <div class="gateway-card">
+            <div class="gateway-header">
+                <div class="gateway-header-left">
+                    <span class="gateway-title">AI Notes Plus Checkout</span>
+                    <span class="gateway-sub">👤 {{ session.get('user', 'User') }}</span>
+                </div>
+                <div class="gateway-amount">₹49</div>
             </div>
-            <p style="font-size: 13px; color: #64748b;">(Payment gateway / UPI QR integration will be activated here soon.)</p>
-            <button class="close-modal-btn" onclick="closePaymentModal()">Got It</button>
+
+            <div class="gateway-body">
+                <!-- 5-Minute Countdown Timer -->
+                <div class="timer-bar" id="timer-box">
+                    ⏳ Complete payment in: <span id="payment-timer">05:00</span>
+                </div>
+
+                <!-- Dynamic UPI QR Scanner -->
+                <div class="qr-frame">
+                    <!-- আপনি চাইলে নিজের QR ছবি /static/qr.png তে রেখে এখানে দিতে পারেন, অথবা নিচে আপনার UPI ID দিলেই অটোমেটিক QR তৈরি হবে -->
+                    <img id="upi-qr-img" src="" alt="Scan UPI QR">
+                </div>
+                <div class="upi-apps-line">Scan with PhonePe • Google Pay • Paytm • Any UPI</div>
+
+                <!-- Direct Pay Button for Mobile Users -->
+                <a id="upi-deep-link" href="#" class="upi-app-btn">📱 Click Here to Pay ₹49 via UPI App</a>
+
+                <!-- 12-Digit UTR Input for Verification -->
+                <div class="utr-box">
+                    <label for="utr-number">Enter 12-Digit UTR / Transaction ID after payment:</label>
+                    <input type="text" id="utr-number" class="utr-input" maxlength="12" placeholder="e.g. 426518902341" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                </div>
+
+                <div id="pay-status-msg" style="display:none; font-size:13px; font-weight:600; margin-bottom:10px;"></div>
+
+                <div class="gateway-actions">
+                    <button type="button" class="cancel-pay-btn" onclick="closePaymentModal()">Cancel</button>
+                    <button type="button" class="verify-pay-btn" id="verify-btn" onclick="submitUtrPayment()">✓ Verify Payment</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        function openPaymentModal() {
-            document.getElementById('payment-modal').style.display = 'flex';
+        // =================================================================
+        // এখানে শুধু আপনার নিজের UPI ID (PhonePe / GPay / Paytm) বসিয়ে দিন:
+        // =================================================================
+        const MY_UPI_ID = "9134873789-2@ibl"; 
+        const PLAN_AMOUNT = "49";
+        const MERCHANT_NAME = "AI Notes Plus";
+
+        let countdownInterval = null;
+        let timeLeftSeconds = 300; // 5 minutes (300 seconds)
+
+        function setupUpiQrAndLink() {
+            const upiUri = `upi://pay?pa=${encodeURIComponent(MY_UPI_ID)}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${PLAN_AMOUNT}&cu=INR&tn=${encodeURIComponent("AI Notes Plus Upgrade")}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`;
+            
+            document.getElementById('upi-qr-img').src = qrUrl;
+            document.getElementById('upi-deep-link').href = upiUri;
         }
+
+        function openPaymentModal() {
+            setupUpiQrAndLink();
+            document.getElementById('utr-number').value = '';
+            document.getElementById('pay-status-msg').style.display = 'none';
+            document.getElementById('payment-modal').style.display = 'flex';
+            startPaymentTimer(300);
+        }
+
         function closePaymentModal() {
             document.getElementById('payment-modal').style.display = 'none';
+            if (countdownInterval) clearInterval(countdownInterval);
+        }
+
+        function startPaymentTimer(seconds) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            timeLeftSeconds = seconds;
+            updateTimerDisplay();
+
+            countdownInterval = setInterval(() => {
+                timeLeftSeconds--;
+                updateTimerDisplay();
+
+                if (timeLeftSeconds <= 0) {
+                    clearInterval(countdownInterval);
+                    const statusEl = document.getElementById('pay-status-msg');
+                    statusEl.style.display = 'block';
+                    statusEl.style.color = '#dc2626';
+                    statusEl.innerText = '⏰ Payment session expired! Please reopen and try again.';
+                    setTimeout(() => closePaymentModal(), 2500);
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = String(Math.floor(timeLeftSeconds / 60)).padStart(2, '0');
+            const secs = String(timeLeftSeconds % 60).padStart(2, '0');
+            document.getElementById('payment-timer').innerText = `${mins}:${secs}`;
+        }
+
+        function submitUtrPayment() {
+            const utr = document.getElementById('utr-number').value.trim();
+            const statusEl = document.getElementById('pay-status-msg');
+
+            if (utr.length !== 12) {
+                statusEl.style.display = 'block';
+                statusEl.style.color = '#dc2626';
+                statusEl.innerText = '⚠️ Please enter a valid 12-digit UTR / UPI Reference Number!';
+                return;
+            }
+
+            if (countdownInterval) clearInterval(countdownInterval);
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#16a34a';
+            statusEl.innerHTML = `✅ <b>UTR #${utr} Submitted!</b><br>Your payment is being verified and Plus tokens will be activated shortly.`;
+            document.getElementById('verify-btn').disabled = true;
+            document.getElementById('verify-btn').style.opacity = '0.6';
         }
     </script>
 </body>
-  </html>
+</html>
