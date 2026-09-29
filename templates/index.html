@@ -74,7 +74,7 @@
             right: 0;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 22px 22px 28px 22px; /* Equal breathing gap on both sides of screen */
+            padding: 22px 22px 28px 22px;
             display: flex;
             flex-direction: column;
             scroll-behavior: smooth;
@@ -93,7 +93,6 @@
             gap: 10px;
             align-items: flex-start;
         }
-        /* Bot row takes full centered width with balanced side gaps, no one-sided push */
         .bot-row {
             flex-direction: column;
             align-items: flex-start;
@@ -151,6 +150,29 @@
             font-weight: 700;
         }
         .bot-row .msg-content u { text-decoration: none !important; }
+
+        /* Style for Clickable Next-Step Question Links (2 Marks -> 5 Marks -> Remaining 5 Marks) */
+        .followup-action-link {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background-color: #eff6ff;
+            border: 1.5px solid #3b82f6;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .followup-action-link:active {
+            transform: scale(0.98);
+        }
+        .followup-action-link span {
+            color: #1d4ed8;
+            font-weight: 700;
+            font-size: 15.5px;
+            text-decoration: underline !important;
+            border-bottom: 2px solid #1d4ed8;
+            padding-bottom: 2px;
+        }
 
         /* HORIZONTAL SCROLLABLE TABLE BOX */
         .table-scroll-box {
@@ -221,7 +243,6 @@
             box-shadow: 0 -4px 14px rgba(0,0,0,0.04);
         }
 
-        /* SUBJECT & MODE SECTION - Slightly larger and spaced so items never tangle */
         .selector-wrapper {
             position: relative;
             width: 100%;
@@ -353,7 +374,7 @@
             line-height: 1.45;
         }
 
-        /* Larger, Comfortable Message Input Box (like Gemini) */
+        /* Larger, Comfortable Message Input Box */
         #form-wrapper {
             width: 100%;
             max-width: 780px;
@@ -538,7 +559,7 @@
                     </div>
                 </div>
                 
-                <!-- AI Message (Full balanced width with equal left-right screen gaps like Gemini) -->
+                <!-- AI Message -->
                 <div class="message-row bot-row" id="bot-row-{{ chat.id }}">
                     <div class="bot-header-line">
                         <img src="/static/bot.png" alt="AI"> AI Notes
@@ -625,7 +646,7 @@
                 </div>
             </div>
 
-            <!-- Locked Chat Mode Switcher Bar (Spacious & Uncluttered) -->
+            <!-- Locked Chat Mode Switcher Bar -->
             <div id="lockedModeBar">
                 <div class="locked-subject-info" id="lockedInfoText"></div>
                 <div class="mode-Switch-group">
@@ -694,10 +715,38 @@
             cleaned = cleaned.replace(/<\/table><\/div>\s*<\/div>/g, '</table></div>');
             cleaned = cleaned.replace(/\n/g, "<br>");
 
+            // Even if AI writes plain text for the 5-marks / remaining questions prompt without HTML onclick, convert it into a clickable underlined link automatically
+            cleaned = cleaned.replace(
+                /(👉\s*২ নম্বরের প্রশ্নোত্তর দেওয়া হয়ে গেছে[^<\n]*)/g,
+                `<div class="followup-action-link" data-auto-prompt="এবার এই টপিকের ৫ নম্বরের (5 Marks) বড় প্রশ্ন ও বিস্তারিত উত্তরগুলো দাও"><span>$1</span></div>`
+            );
+            cleaned = cleaned.replace(
+                /(👉\s*৫টি দেওয়া হলো, আরও ৫ নম্বরের প্রশ্নোত্তর বাকি আছে[^<\n]*|👉\s*আরও ৫ নম্বরের প্রশ্নোত্তর বাকি আছে[^<\n]*)/g,
+                `<div class="followup-action-link" style="background-color:#fef3c7; border-color:#d97706;" data-auto-prompt="বাকি থাকা পরের ৫ নম্বরের (5 Marks) প্রশ্ন ও বিস্তারিত উত্তরগুলো (৬ নম্বর থেকে) দাও"><span style="color:#b45309; border-bottom-color:#b45309;">$1</span></div>`
+            );
+
             const safeIsolator = document.createElement('div');
             safeIsolator.innerHTML = cleaned;
             return safeIsolator.innerHTML;
         }
+
+        // Delegate clicks on any follow-up 5-marks / remaining questions link inside chatBox
+        chatBox.addEventListener('click', function(e) {
+            const actionEl = e.target.closest('.followup-action-link');
+            if (actionEl) {
+                e.preventDefault();
+                e.stopPropagation();
+                const autoPromptText = actionEl.getAttribute('data-auto-prompt');
+                if (autoPromptText) {
+                    if (selectedSubject && selectedCourse && selectedLang) {
+                        switchActiveMode('Question Answer');
+                    }
+                    const p = document.getElementById('prompt');
+                    p.value = autoPromptText;
+                    sendMessage();
+                }
+            }
+        });
 
         function openVoicePage() {
             document.getElementById('voice-page-modal').style.display = 'flex';
