@@ -1,1245 +1,1489 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Notes</title>
-    <style>
-        * { box-sizing: border-box; }
-        html, body {
-            height: 100dvh;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            background-color: #ffffff;
-            color: #1f2937;
-            font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Noto Sans Bengali, sans-serif;
-            overflow: hidden;
-            position: fixed;
-            top: 0;
-            left: 0;
-            -webkit-font-smoothing: antialiased;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Notes</title>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            height: 100dvh;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            color: #1f2937;
+            font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Noto Sans Bengali, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            -webkit-font-smoothing: antialiased;
+        }
 
-        /* 1. FIXED TOP HEADER */
-        #header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            font-weight: 700;
-            font-size: 18px;
-            background: #ffffff;
-            z-index: 1000;
-        }
-        .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; margin-right: 14px; }
-        .new-chat-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #333; padding: 5px; }
+        /* 1. FIXED TOP HEADER (With Daily Token Display under AI Notes) */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 62px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-weight: 700;
+            font-size: 18px;
+            background: #ffffff;
+            z-index: 1000;
+        }
+        .menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; margin-right: 14px; }
+        .new-chat-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #333; padding: 5px; }
 
-        /* SIDEBAR */
-        #sidebar {
-            position: fixed;
-            top: 0;
-            left: -270px;
-            width: 265px;
-            height: 100dvh;
-            background-color: #f8fafc;
-            border-right: 1px solid #e5e7eb;
-            transition: left 0.3s ease;
-            z-index: 2001;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-        #sidebar.open { left: 0; }
-        .close-sidebar { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 28px; cursor: pointer; color: #666; }
-        .sidebar-item { padding: 12px; border-radius: 10px; cursor: pointer; font-size: 15px; margin-bottom: 8px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .sidebar-item:hover { background: #e2e8f0; }
-        .active-session { background: #e2e8f0; font-weight: bold; }
+        .header-title-wrap {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.15;
+        }
+        .token-badge-sub {
+            font-size: 11px;
+            font-weight: 600;
+            color: #0D8ABC;
+            margin-top: 2px;
+            letter-spacing: 0.2px;
+        }
 
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
-        #overlay.open { display: block; }
+        /* SIDEBAR (With Search Bar, Compact History & Three-Dot Menu) */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: -275px;
+            width: 270px;
+            height: 100dvh;
+            background-color: #f8fafc;
+            border-right: 1px solid #e5e7eb;
+            transition: left 0.3s ease;
+            z-index: 2001;
+            padding: 18px 14px;
+            display: flex;
+            flex-direction: column;
+        }
+        #sidebar.open { left: 0; }
+        .close-sidebar { position: absolute; top: 14px; right: 14px; background: none; border: none; font-size: 26px; cursor: pointer; color: #666; }
+        .sidebar-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 14px; margin-bottom: 6px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .sidebar-item:hover { background: #e2e8f0; }
 
-        /* 2. FIXED MIDDLE CHAT DISPLAY (Balanced Left-Right Gap like Gemini) */
-        #chat-box {
-            position: fixed;
-            top: 60px;
-            bottom: 165px; /* Dynamically synced by JS */
-            left: 0;
-            right: 0;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 22px 22px 28px 22px; /* Equal breathing gap on both sides of screen */
-            display: flex;
-            flex-direction: column;
-            scroll-behavior: smooth;
-            background: #ffffff;
-            z-index: 1;
-        }
+        /* Search Input Box above Chat History */
+        .chat-search-box {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            background: #ffffff;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+        .chat-search-box:focus { border-color: #0D8ABC; }
 
-        .message-row {
-            display: flex;
-            margin: 0 auto 28px auto;
-            width: 100%;
-            max-width: 780px;
-        }
-        .user-row {
-            justify-content: flex-end;
-            gap: 10px;
-            align-items: flex-start;
-        }
-        /* Bot row takes full centered width with balanced side gaps, no one-sided push */
-        .bot-row {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 6px;
-        }
+        /* Compact Chat History Item with Three-Dot Button */
+        .history-item-row {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 8px 7px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.15s;
+        }
+        .history-item-row:hover { background: #e2e8f0; }
+        .history-item-row.active-session { background: #e2e8f0; font-weight: 600; }
 
-        .avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0; }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .history-title-text {
+            font-size: 12.5px;
+            color: #334155;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            flex: 1;
+            padding-right: 6px;
+        }
 
-        .bot-header-line {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13.5px;
-            font-weight: 600;
-            color: #475569;
-            margin-bottom: 2px;
-        }
-        .bot-header-line img {
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
-        }
+        .three-dot-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 5px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .three-dot-btn:hover { background: #cbd5e1; color: #0f172a; }
 
-        .message { min-width: 0; position: relative; display: flex; flex-direction: column; }
-        .user-msg { max-width: 82%; }
-        .bot-msg { width: 100%; }
+        /* Three-Dot Popup Menu (View & Rename) */
+        .chat-opt-menu {
+            display: none;
+            position: absolute;
+            right: 8px;
+            top: 32px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            z-index: 2500;
+            width: 125px;
+            overflow: hidden;
+        }
+        .chat-opt-btn {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 12.5px;
+            color: #1e293b;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .chat-opt-btn:last-child { border-bottom: none; }
+        .chat-opt-btn:hover { background: #eff6ff; color: #0D8ABC; font-weight: 600; }
 
-        /* Gemini-style Typography for Bot & User Messages */
-        .msg-content {
-            font-size: 16px;
-            line-height: 1.75;
-            letter-spacing: 0.15px;
-            color: #1f2937;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-        .user-row .msg-content {
-            background-color: #f1f5f9;
-            padding: 12px 18px;
-            border-radius: 20px;
-            border-top-right-radius: 4px;
-            font-size: 15.5px;
-            line-height: 1.55;
-            color: #0f172a;
-        }
-        .bot-row .msg-content {
-            background-color: transparent;
-            padding: 4px 2px;
-            width: 100%;
-            overflow: hidden;
-        }
-        .bot-row .msg-content b, .bot-row .msg-content strong {
-            color: #0f172a;
-            font-weight: 700;
-        }
-        .bot-row .msg-content u { text-decoration: none !important; }
+        /* Modal for View Full Name & Rename */
+        #chat-info-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 3500;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .chat-modal-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 360px;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
 
-        /* HORIZONTAL SCROLLABLE TABLE BOX */
-        .table-scroll-box {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin: 14px 0;
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            background: #ffffff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            display: block;
-        }
-        .msg-content table {
-            width: 100%;
-            min-width: 480px;
-            border-collapse: collapse;
-            font-size: 14.5px;
-            text-align: left;
-        }
-        .msg-content th {
-            background-color: #2563eb !important;
-            color: #ffffff !important;
-            padding: 11px 14px !important;
-            border: 1px solid #cbd5e1 !important;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .msg-content td {
-            padding: 11px 14px !important;
-            border: 1px solid #cbd5e1 !important;
-            vertical-align: top;
-            line-height: 1.55;
-        }
-        .msg-content tr:nth-child(even) td { background-color: #f8fafc; }
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
+        #overlay.open { display: block; }
 
-        /* MESSAGE FOOTER & SMALL THIN DISCLAIMER */
-        .msg-footer { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: #888; }
-        .msg-time { font-size: 11.5px; font-weight: 500; }
-        .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .action-icon svg { width: 16px; height: 16px; fill: #888; transition: fill 0.2s; }
-        .action-icon:hover svg { fill: #000; }
+        /* 2. FIXED MIDDLE CHAT DISPLAY */
+        #chat-box {
+            position: fixed;
+            top: 62px;
+            bottom: 165px;
+            left: 0;
+            right: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 22px 22px 28px 22px;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
+            background: #ffffff;
+            z-index: 1;
+        }
 
-        .ai-disclaimer {
-            font-size: 10.5px;
-            font-weight: 300;
-            color: #9ca3af;
-            margin-top: 5px;
-            letter-spacing: 0.2px;
-            line-height: 1.2;
-            user-select: none;
-        }
+        .message-row {
+            display: flex;
+            margin: 0 auto 28px auto;
+            width: 100%;
+            max-width: 780px;
+        }
+        .user-row {
+            justify-content: flex-end;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .bot-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
 
-        .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
+        .bot-header-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 2px;
+        }
+        .bot-header-line img {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+        }
 
-        /* 3. FIXED BOTTOM FOOTER MESSAGE SECTION (Larger & Well-Spaced) */
-        #input-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            padding: 12px 16px 16px 16px;
-            background: #ffffff;
-            border-top: 1px solid #e5e7eb;
-            z-index: 1000;
-            box-shadow: 0 -4px 14px rgba(0,0,0,0.04);
-        }
+        .message { min-width: 0; position: relative; display: flex; flex-direction: column; }
+        .user-msg { max-width: 82%; }
+        .bot-msg { width: 100%; }
 
-        /* SUBJECT & MODE SECTION - Slightly larger and spaced so items never tangle */
-        .selector-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 780px;
-            margin: 0 auto 12px auto;
-        }
-        .selector-bar {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .select-btn {
-            background: #f8fafc;
-            border: 1.5px solid #0D8ABC;
-            color: #0D8ABC;
-            padding: 8px 16px;
-            border-radius: 22px;
-            font-size: 14.5px;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            box-shadow: 0 2px 6px rgba(13, 138, 188, 0.08);
-        }
+        .msg-content {
+            font-size: 16px;
+            line-height: 1.75;
+            letter-spacing: 0.15px;
+            color: #1f2937;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .user-row .msg-content {
+            background-color: #f1f5f9;
+            padding: 12px 18px;
+            border-radius: 20px;
+            border-top-right-radius: 4px;
+            font-size: 15.5px;
+            line-height: 1.55;
+            color: #0f172a;
+        }
+        .bot-row .msg-content {
+            background-color: transparent;
+            padding: 4px 2px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .bot-row .msg-content b, .bot-row .msg-content strong {
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .bot-row .msg-content u { text-decoration: none !important; }
 
-        /* Scrollable Dropdown List */
-        .dropdown-menu-list {
-            display: none;
-            position: absolute;
-            bottom: 100%;
-            margin-bottom: 8px;
-            left: 0;
-            width: 260px;
-            max-height: 220px;
-            overflow-y: auto;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 14px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-            z-index: 1500;
-            padding: 6px 0;
-        }
-        .dropdown-item-opt {
-            padding: 11px 16px;
-            font-size: 15px;
-            color: #1e293b;
-            cursor: pointer;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
+        /* HORIZONTAL SCROLLABLE TABLE BOX */
+        .table-scroll-box {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 14px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: block;
+        }
+        .msg-content table {
+            width: 100%;
+            min-width: 480px;
+            border-collapse: collapse;
+            font-size: 14.5px;
+            text-align: left;
+        }
+        .msg-content th {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            padding: 11px 14px !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .msg-content td {
+            padding: 11px 14px !important;
+            border: 1px solid #cbd5e1 !important;
+            vertical-align: top;
+            line-height: 1.55;
+        }
+        .msg-content tr:nth-child(even) td { background-color: #f8fafc; }
 
-        .selected-tag-box {
-            display: none;
-            align-items: center;
-            gap: 8px;
-            background: #e0f2fe;
-            color: #0369a1;
-            border: 1px solid #7dd3fc;
-            padding: 7px 14px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            flex-wrap: wrap;
-            line-height: 1.4;
-        }
+        /* MESSAGE FOOTER & SMALL THIN DISCLAIMER */
+        .msg-footer { display: flex; align-items: center; gap: 14px; margin-top: 10px; color: #888; }
+        .msg-time { font-size: 11.5px; font-weight: 500; }
+        .action-icon { background: none; border: none; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-icon svg { width: 16px; height: 16px; fill: #888; transition: fill 0.2s; }
+        .action-icon:hover svg { fill: #000; }
 
-        /* Locked Mode Bar - Clear spacing & slightly bigger buttons */
-        #lockedModeBar {
-            display: none;
-            width: 100%;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .locked-subject-info {
-            font-size: 13.5px;
-            color: #1e293b;
-            font-weight: 600;
-            background: #f1f5f9;
-            padding: 7px 12px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 6px;
-            border: 1px solid #e2e8f0;
-        }
-        .mode-Switch-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            overflow-x: auto;
-            white-space: nowrap;
-            padding: 2px 0;
-        }
-        .mode-pill-btn {
-            background: #ffffff;
-            border: 1.5px solid #cbd5e1;
-            color: #334155;
-            padding: 8px 16px;
-            border-radius: 22px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-        }
-        .mode-pill-btn.active-mode {
-            background: #0D8ABC;
-            border-color: #0D8ABC;
-            color: #ffffff;
-            box-shadow: 0 3px 8px rgba(13, 138, 188, 0.28);
-        }
+        .ai-disclaimer {
+            font-size: 10.5px;
+            font-weight: 300;
+            color: #9ca3af;
+            margin-top: 5px;
+            letter-spacing: 0.2px;
+            line-height: 1.2;
+            user-select: none;
+        }
 
-        .lock-warning {
-            font-size: 13px;
-            color: #d93025;
-            margin-top: 8px;
-            padding-left: 4px;
-            font-weight: 600;
-            line-height: 1.45;
-        }
+        .chat-image { width: 150px; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; cursor: pointer; border: 1px solid #ddd; }
 
-        /* Larger, Comfortable Message Input Box (like Gemini) */
-        #form-wrapper {
-            width: 100%;
-            max-width: 780px;
-            margin: 0 auto;
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            border-radius: 30px;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .attach-btn { background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px 6px; color: #475569; flex-shrink: 0; }
-        #prompt {
-            flex: 1 1 auto;
-            min-width: 0;
-            width: 100%;
-            border: none;
-            outline: none;
-            background: transparent;
-            padding: 8px 6px;
-            font-size: 16px;
-            color: #0f172a;
-            resize: none;
-            max-height: 90px;
-            height: 28px;
-            line-height: 24px;
-            font-family: inherit;
-        }
-        .send-btn {
-            background: #0f172a;
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 38px;
-            height: 38px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
+        /* 3. FIXED BOTTOM FOOTER MESSAGE SECTION */
+        #input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            padding: 12px 16px 16px 16px;
+            background: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            z-index: 1000;
+            box-shadow: 0 -4px 14px rgba(0,0,0,0.04);
+        }
 
-        /* ROUND VOICE ANIMATION BUTTON */
-        .voice-anim-btn {
-            background: linear-gradient(135deg, #0D8ABC, #2563eb);
-            border: none;
-            border-radius: 50%;
-            width: 38px;
-            height: 38px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2.5px;
-            flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-        }
-        .voice-bar { width: 2.5px; background: #ffffff; border-radius: 2px; animation: voiceWave 1.1s infinite ease-in-out; }
-        .voice-bar:nth-child(1) { height: 9px; animation-delay: 0s; }
-        .voice-bar:nth-child(2) { height: 16px; animation-delay: 0.2s; }
-        .voice-bar:nth-child(3) { height: 12px; animation-delay: 0.4s; }
-        .voice-bar:nth-child(4) { height: 15px; animation-delay: 0.1s; }
-        @keyframes voiceWave {
-            0%, 100% { transform: scaleY(0.5); }
-            50% { transform: scaleY(1.25); }
-        }
+        .selector-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 780px;
+            margin: 0 auto 12px auto;
+        }
+        .selector-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .select-btn {
+            background: #f8fafc;
+            border: 1.5px solid #0D8ABC;
+            color: #0D8ABC;
+            padding: 8px 16px;
+            border-radius: 22px;
+            font-size: 14.5px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(13, 138, 188, 0.08);
+        }
 
-        /* FULL SCREEN VOICE PAGE OVERLAY */
-        #voice-page-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, #0f172a, #020617);
-            z-index: 3000;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 40px 20px;
-            color: #ffffff;
-        }
-        .voice-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: auto 0; }
-        .voice-orb {
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #38bdf8, #2563eb, #ec4899);
-            box-shadow: 0 0 50px rgba(56, 189, 248, 0.6);
-            animation: orbPulse 2s infinite ease-in-out;
-        }
-        @keyframes orbPulse {
-            0%, 100% { transform: scale(0.92); box-shadow: 0 0 35px rgba(56, 189, 248, 0.5); }
-            50% { transform: scale(1.08); box-shadow: 0 0 75px rgba(236, 72, 153, 0.7); }
-        }
-        .close-voice-page { background: #ef4444; color: white; border: none; border-radius: 50%; width: 52px; height: 52px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .dropdown-menu-list {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            margin-bottom: 8px;
+            left: 0;
+            width: 260px;
+            max-height: 220px;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            z-index: 1500;
+            padding: 6px 0;
+        }
+        .dropdown-item-opt {
+            padding: 11px 16px;
+            font-size: 15px;
+            color: #1e293b;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dropdown-item-opt:hover { background: #eff6ff; color: #0D8ABC; font-weight: bold; }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .btn-spinner { border: 2px solid transparent; border-top: 2px solid #fff; border-radius: 50%; width: 15px; height: 15px; animation: spin 1s linear infinite; }
-        .typing-spinner { border: 2px solid #ccc; border-top-color: #000; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; }
+        .selected-tag-box {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            flex-wrap: wrap;
+            line-height: 1.4;
+        }
 
-        #image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2500; justify-content: center; align-items: center; cursor: pointer; }
-        #modal-img { max-width: 90%; max-height: 90%; border-radius: 10px; }
-    </style>
+        #lockedModeBar {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .locked-subject-info {
+            font-size: 13.5px;
+            color: #1e293b;
+            font-weight: 600;
+            background: #f1f5f9;
+            padding: 7px 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        .mode-Switch-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 2px 0;
+        }
+        .mode-pill-btn {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            color: #334155;
+            padding: 8px 16px;
+            border-radius: 22px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .mode-pill-btn.active-mode {
+            background: #0D8ABC;
+            border-color: #0D8ABC;
+            color: #ffffff;
+            box-shadow: 0 3px 8px rgba(13, 138, 188, 0.28);
+        }
+
+        .lock-warning {
+            font-size: 13px;
+            color: #d93025;
+            margin-top: 8px;
+            padding-left: 4px;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+
+        #form-wrapper {
+            width: 100%;
+            max-width: 780px;
+            margin: 0 auto;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .attach-btn { background: none; border: none; font-size: 22px; cursor: pointer; padding: 4px 6px; color: #475569; flex-shrink: 0; }
+        #prompt {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 8px 6px;
+            font-size: 16px;
+            color: #0f172a;
+            resize: none;
+            max-height: 90px;
+            height: 28px;
+            line-height: 24px;
+            font-family: inherit;
+        }
+        .send-btn {
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        /* ROUND VOICE ANIMATION BUTTON */
+        .voice-anim-btn {
+            background: linear-gradient(135deg, #0D8ABC, #2563eb);
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+        }
+        .voice-bar { width: 2.5px; background: #ffffff; border-radius: 2px; animation: voiceWave 1.1s infinite ease-in-out; }
+        .voice-bar:nth-child(1) { height: 9px; animation-delay: 0s; }
+        .voice-bar:nth-child(2) { height: 16px; animation-delay: 0.2s; }
+        .voice-bar:nth-child(3) { height: 12px; animation-delay: 0.4s; }
+        .voice-bar:nth-child(4) { height: 15px; animation-delay: 0.1s; }
+        @keyframes voiceWave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1.25); }
+        }
+
+        /* FULL SCREEN VOICE PAGE OVERLAY */
+        #voice-page-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #0f172a, #020617);
+            z-index: 3000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 40px 20px;
+            color: #ffffff;
+        }
+        .voice-orb-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: auto 0; }
+        .voice-orb {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #2563eb, #ec4899);
+            box-shadow: 0 0 50px rgba(56, 189, 248, 0.6);
+            animation: orbPulse 2s infinite ease-in-out;
+        }
+        @keyframes orbPulse {
+            0%, 100% { transform: scale(0.92); box-shadow: 0 0 35px rgba(56, 189, 248, 0.5); }
+            50% { transform: scale(1.08); box-shadow: 0 0 75px rgba(236, 72, 153, 0.7); }
+        }
+        .close-voice-page { background: #ef4444; color: white; border: none; border-radius: 50%; width: 52px; height: 52px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-spinner { border: 2px solid transparent; border-top: 2px solid #fff; border-radius: 50%; width: 15px; height: 15px; animation: spin 1s linear infinite; }
+        .typing-spinner { border: 2px solid #ccc; border-top-color: #000; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; }
+
+        #image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2500; justify-content: center; align-items: center; cursor: pointer; }
+        #modal-img { max-width: 90%; max-height: 90%; border-radius: 10px; }
+    </style>
 </head>
 <body>
-    <!-- Image Zoom Modal -->
-    <div id="image-modal" onclick="this.style.display='none'">
-        <img id="modal-img" src="">
-    </div>
-
-    <!-- VOICE PAGE MODAL -->
-    <div id="voice-page-modal">
-        <div style="font-size: 16px; font-weight: 600; opacity: 0.85;">AI Notes Voice Mode</div>
-        <div class="voice-orb-container">
-            <div class="voice-orb"></div>
-            <p style="margin-top: 30px; font-size: 18px; font-weight: 500; color: #e2e8f0;">Listening...</p>
-            <span style="font-size: 13px; color: #94a3b8; margin-top: 4px;">(Voice conversation feature coming soon)</span>
-        </div>
-        <button class="close-voice-page" onclick="closeVoicePage()" title="Close Voice Mode">×</button>
-    </div>
-
-    <div id="overlay" onclick="toggleSidebar()"></div>
-    
-    <div id="sidebar">
-        <button class="close-sidebar" onclick="toggleSidebar()">×</button>
-        <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 20px; margin-bottom: 25px; margin-top: 5px;">
-            <img src="/static/bot.png" style="width: 30px; height: 30px; border-radius: 5px;"> AI Notes
-        </div>
-        <div class="sidebar-item" onclick="startNewChat()" style="background: #eef2f5; font-weight: bold; color: #0D8ABC;">➕ New Chat</div>
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
-        <div style="font-size: 12px; color: #888; font-weight: bold; padding-left: 10px; margin-bottom: 10px;">Chat History</div>
-        
-        <div style="flex: 1; overflow-y: auto;">
-            {% for s in sidebar_sessions %}
-                <div class="sidebar-item {% if s.id == current_session %}active-session{% endif %}" onclick="window.location.href='/?session_id={{ s.id }}'">
-                    💬 {{ s.title }}
-                </div>
-            {% endfor %}
-        </div>
-
-        <div style="margin-top: auto; padding-top: 10px;">
-            <a href="/logout" style="text-decoration: none; color: #d93025;"><div class="sidebar-item">🚪 Logout</div></a>
-            <div class="sidebar-item" style="background: linear-gradient(90deg, #ff8a00, #e52e71); color: white; text-align: center; font-weight: bold; box-shadow: 0 4px 10px rgba(229,46,113,0.3);">⭐ Upgrade to Plus</div>
-            <div style="font-size: 12px; color: #777; text-align: center; margin-top: 12px; word-break: break-all;">👤 {{ user_email }}</div>
-        </div>
-    </div>
-
-    <!-- 1. FIXED TOP HEADER -->
-    <div id="header">
-        <div style="display: flex; align-items: center;">
-            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-            <span style="display: flex; align-items: center; gap: 8px;">
-                <img src="/static/bot.png" style="width: 26px; height: 26px; border-radius: 6px;" alt="AI"> AI Notes
-            </span>
-        </div>
-        <button class="new-chat-btn" onclick="startNewChat()" title="New Chat">➕</button>
-    </div>
-
-    <!-- 2. FIXED MIDDLE CHAT DISPLAY -->
-    <div id="chat-box">
-        {% if history %}
-            {% for chat in history %}
-                <!-- User Message -->
-                <div class="message-row user-row" id="row-{{ chat.id }}">
-                    <div class="message user-msg">
-                        <div class="msg-content" id="msg-{{ chat.id }}">
-                            {% if chat.img_url %}
-                                <img src="{{ chat.img_url }}" class="chat-image" onclick="openModal(this.src)"><br>
-                            {% endif %}
-                            <span class="text-content">{{ chat.user_msg }}</span>
-                        </div>
-                        <div class="msg-footer" style="justify-content: flex-end;">
-                            <span class="msg-time">Today</span>
-                            <button class="action-icon" id="edit-btn-{{ chat.id }}" onclick="startEdit('{{ chat.id }}')" title="Edit Message">
-                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- AI Message (Full balanced width with equal left-right screen gaps like Gemini) -->
-                <div class="message-row bot-row" id="bot-row-{{ chat.id }}">
-                    <div class="bot-header-line">
-                        <img src="/static/bot.png" alt="AI"> AI Notes
-                    </div>
-                    <div class="message bot-msg">
-                        <div class="msg-content raw-bot-msg">{{ chat.ai_msg }}</div>
-                        <div class="msg-footer">
-                            <span class="msg-time">Today</span>
-                            <button class="action-icon" title="Good response"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
-                            <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
-                            <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
-                            <button class="action-icon" title="Regenerate response"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
-                        </div>
-                        <div class="ai-disclaimer">AI Notes is AI and can make mistakes.</div>
-                    </div>
-                </div>
-            {% endfor %}
-        {% endif %}
-    </div>
-
-    <!-- 3. FIXED BOTTOM FOOTER MESSAGE SECTION -->
-    <div id="input-container">
-        <div class="selector-wrapper">
-            <!-- 1. Subject List -->
-            <div id="subjectDropdown" class="dropdown-menu-list">
-                <div class="dropdown-item-opt subject-opt" data-name="Zoology" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Botany" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Biochemistry" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Chemistry" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Physics" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Physiology" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Mathematics" onclick="chooseSubject('Mathematics')">📐 Mathematics <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Computer Science" onclick="chooseSubject('Computer Science')">💻 Computer Science <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="History" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Geography" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Political Science" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Philosophy" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Education" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Sanskrit" onclick="chooseSubject('Sanskrit')">📜 Sanskrit <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Bengali" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="English" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
-                <div class="dropdown-item-opt subject-opt" data-name="Environmental Science" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
-            </div>
-
-            <!-- 2. Honours / General List -->
-            <div id="courseDropdown" class="dropdown-menu-list">
-                <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours <span>➔</span></div>
-                <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC <span>➔</span></div>
-            </div>
-
-            <!-- 3. Language List -->
-            <div id="langDropdown" class="dropdown-menu-list">
-                <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>➔</span></div>
-                <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>➔</span></div>
-            </div>
-
-            <!-- 4. Mode List -->
-            <div id="modeDropdown" class="dropdown-menu-list">
-                <div class="dropdown-item-opt" onclick="chooseMode('Notes')">📝 Notes <span>✓</span></div>
-                <div class="dropdown-item-opt" onclick="chooseMode('Question Answer')">❓ Question Answer <span>✓</span></div>
-                <div class="dropdown-item-opt" onclick="chooseMode('Doubt Solve')">💡 Doubt Solve <span>✓</span></div>
-            </div>
-
-            <!-- Initial Setup Bar -->
-            <div id="initialSetupBar" class="selector-bar">
-                <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
-                    📚 Select Subject <span>▾</span>
-                </button>
-
-                <button type="button" id="courseTypeBtn" class="select-btn" style="display:none;" onclick="toggleCourseList()">
-                    🎓 Honours / General <span>▾</span>
-                </button>
-
-                <button type="button" id="langTypeBtn" class="select-btn" style="display:none;" onclick="toggleLangList()">
-                    🗣️ Language (Bengali / English) <span>▾</span>
-                </button>
-
-                <button type="button" id="modeTypeBtn" class="select-btn" style="display:none;" onclick="toggleModeList()">
-                    📝 Notes / Q&A / Doubt <span>▾</span>
-                </button>
-
-                <div id="selectedBadge" class="selected-tag-box">
-                    <span id="badgeText"></span>
-                </div>
-            </div>
-
-            <!-- Locked Chat Mode Switcher Bar (Spacious & Uncluttered) -->
-            <div id="lockedModeBar">
-                <div class="locked-subject-info" id="lockedInfoText"></div>
-                <div class="mode-Switch-group">
-                    <button type="button" class="mode-pill-btn" id="pill-Notes" onclick="switchActiveMode('Notes')">📝 Notes</button>
-                    <button type="button" class="mode-pill-btn" id="pill-Question Answer" onclick="switchActiveMode('Question Answer')">❓ Question Answer</button>
-                    <button type="button" class="mode-pill-btn" id="pill-Doubt Solve" onclick="switchActiveMode('Doubt Solve')">💡 Doubt Solve</button>
-                </div>
-            </div>
-
-            <div id="lockNotice" class="lock-warning">
-                ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt</b> before sending a message.
-            </div>
-        </div>
-
-        <div id="image-preview-container" style="display: none; position: relative; margin-bottom: 10px; width: fit-content; padding-left: 10px;">
-            <img id="image-preview" src="" style="width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 2px solid #0D8ABC;">
-            <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
-        </div>
-        
-        <div id="form-wrapper">
-            <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
-            <button class="attach-btn" id="attach-btn" type="button" onclick="handleAttachClick()">📎</button>
-            <textarea id="prompt" placeholder="Type subject name (e.g. Zoology) or select above..." oninput="handlePromptTyping(this.value)"></textarea>
-            
-            <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()" title="Send Message">↑</button>
-            
-            <button class="voice-anim-btn" id="voice-btn" type="button" onclick="openVoicePage()" title="Open Voice Mode">
-                <span class="voice-bar"></span>
-                <span class="voice-bar"></span>
-                <span class="voice-bar"></span>
-                <span class="voice-bar"></span>
-            </button>
-        </div>
-    </div>
-
-    <script>
-        const chatBox = document.getElementById('chat-box');
-        const inputContainer = document.getElementById('input-container');
-        let currentSessionId = "{{ current_session }}";
-
-        function syncChatBoxBottom() {
-            if (inputContainer && chatBox) {
-                chatBox.style.bottom = inputContainer.offsetHeight + 'px';
-            }
-        }
-        if (window.ResizeObserver) {
-            new ResizeObserver(syncChatBoxBottom).observe(inputContainer);
-        }
-        window.addEventListener('resize', syncChatBoxBottom);
-
-        function formatBotResponse(rawText) {
-            if (!rawText) return "";
-            let cleaned = rawText.replace(/<\/?u>/gi, "");
-
-            const openTables = (cleaned.match(/<table/gi) || []).length;
-            const closeTables = (cleaned.match(/<\/table>/gi) || []).length;
-            if (openTables > closeTables) {
-                cleaned += "</td></tr></tbody></table></div>";
-            }
-
-            cleaned = cleaned.replace(/<table[\s\S]*?<\/table>/gi, function(tableMatch) {
-                let compactTable = tableMatch.replace(/\r?\n/g, " ");
-                return `<div class="table-scroll-box">${compactTable}</div>`;
-            });
-            cleaned = cleaned.replace(/<div class="table-scroll-box">\s*<div class="table-scroll-box">/g, '<div class="table-scroll-box">');
-            cleaned = cleaned.replace(/<\/table><\/div>\s*<\/div>/g, '</table></div>');
-            cleaned = cleaned.replace(/\n/g, "<br>");
-
-            const safeIsolator = document.createElement('div');
-            safeIsolator.innerHTML = cleaned;
-            return safeIsolator.innerHTML;
-        }
-
-        function openVoicePage() {
-            document.getElementById('voice-page-modal').style.display = 'flex';
-        }
-        function closeVoicePage() {
-            document.getElementById('voice-page-modal').style.display = 'none';
-        }
-
-        // === SESSION-LOCKED SELECTION LOGIC ===
-        let selectedSubject = "";
-        let selectedCourse = "";
-        let selectedLang = "";
-        let selectedMode = "";
-
-        function startNewChat() {
-            sessionStorage.removeItem('new_chat_selection');
-            window.location.href = '/';
-        }
-
-        function closeAllDropdowns() {
-            document.getElementById("subjectDropdown").style.display = "none";
-            document.getElementById("courseDropdown").style.display = "none";
-            document.getElementById("langDropdown").style.display = "none";
-            document.getElementById("modeDropdown").style.display = "none";
-        }
-
-        function resetSubjectFilter() {
-            document.querySelectorAll('.subject-opt').forEach(item => item.style.display = 'flex');
-        }
-
-        function toggleSubjectList() {
-            const el = document.getElementById("subjectDropdown");
-            const isOpen = el.style.display === "block";
-            closeAllDropdowns();
-            resetSubjectFilter();
-            el.style.display = isOpen ? "none" : "block";
-        }
-
-        function toggleCourseList() {
-            const el = document.getElementById("courseDropdown");
-            const isOpen = el.style.display === "block";
-            closeAllDropdowns();
-            el.style.display = isOpen ? "none" : "block";
-        }
-
-        function toggleLangList() {
-            const el = document.getElementById("langDropdown");
-            const isOpen = el.style.display === "block";
-            closeAllDropdowns();
-            el.style.display = isOpen ? "none" : "block";
-        }
-
-        function toggleModeList() {
-            const el = document.getElementById("modeDropdown");
-            const isOpen = el.style.display === "block";
-            closeAllDropdowns();
-            el.style.display = isOpen ? "none" : "block";
-        }
-
-        function handlePromptTyping(val) {
-            const query = val.trim().toLowerCase();
-            if (!selectedSubject) {
-                const dropdown = document.getElementById("subjectDropdown");
-                const items = document.querySelectorAll('.subject-opt');
-                if (query.length > 0) {
-                    let anyVisible = false;
-                    items.forEach(item => {
-                        const subName = item.getAttribute('data-name').toLowerCase();
-                        if (subName.includes(query)) {
-                            item.style.display = 'flex';
-                            anyVisible = true;
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                    dropdown.style.display = anyVisible ? 'block' : 'none';
-                } else {
-                    resetSubjectFilter();
-                    dropdown.style.display = 'none';
-                }
-            }
-        }
-
-        function chooseSubject(sub) {
-            selectedSubject = sub;
-            selectedCourse = "";
-            selectedLang = "";
-            selectedMode = "";
-            closeAllDropdowns();
-            resetSubjectFilter();
-
-            document.getElementById("prompt").value = "";
-            document.getElementById("mainSubjectBtn").style.display = "none";
-            document.getElementById("selectedBadge").style.display = "inline-flex";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Select Honours/General)</span>`;
-
-            document.getElementById("courseTypeBtn").style.display = "inline-flex";
-            document.getElementById("langTypeBtn").style.display = "none";
-            document.getElementById("modeTypeBtn").style.display = "none";
-            document.getElementById("courseDropdown").style.display = "block";
-            updateLockState();
-        }
-
-        function chooseCourse(course) {
-            selectedCourse = course;
-            selectedLang = "";
-            selectedMode = "";
-            closeAllDropdowns();
-
-            document.getElementById("prompt").value = "";
-            document.getElementById("courseTypeBtn").style.display = "none";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ <span style="color:#d97706;">(Select Language)</span>`;
-
-            document.getElementById("langTypeBtn").style.display = "inline-flex";
-            document.getElementById("modeTypeBtn").style.display = "none";
-            document.getElementById("langDropdown").style.display = "block";
-            updateLockState();
-        }
-
-        function chooseLanguage(lang) {
-            selectedLang = lang;
-            selectedMode = "";
-            closeAllDropdowns();
-
-            document.getElementById("prompt").value = "";
-            document.getElementById("langTypeBtn").style.display = "none";
-            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ <span style="color:#d97706;">(Select Mode)</span>`;
-
-            document.getElementById("modeTypeBtn").style.display = "inline-flex";
-            document.getElementById("modeDropdown").style.display = "block";
-            updateLockState();
-        }
-
-        function chooseMode(mode) {
-            selectedMode = mode;
-            closeAllDropdowns();
-            document.getElementById("prompt").value = "";
-
-            saveSessionSelection();
-            activateLockedChatMode();
-            document.getElementById("prompt").focus();
-        }
-
-        function switchActiveMode(mode) {
-            selectedMode = mode;
-            saveSessionSelection();
-
-            document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
-            const activeBtn = document.getElementById(`pill-${mode}`);
-            if (activeBtn) activeBtn.classList.add('active-mode');
-
-            updateLockState();
-            document.getElementById("prompt").focus();
-        }
-
-        function activateLockedChatMode() {
-            document.getElementById("initialSetupBar").style.display = "none";
-            document.getElementById("lockedModeBar").style.display = "flex";
-            document.getElementById("lockedInfoText").innerHTML = `
-                <span>🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b></span>
-                <span style="color:#64748b; font-size:12px; font-weight:500;">(➕ New Chat for other subject)</span>
-            `;
-
-            document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
-            const activeBtn = document.getElementById(`pill-${selectedMode}`);
-            if (activeBtn) activeBtn.classList.add('active-mode');
-
-            updateLockState();
-            syncChatBoxBottom();
-        }
-
-        function saveSessionSelection() {
-            const data = JSON.stringify({
-                subject: selectedSubject,
-                course: selectedCourse,
-                lang: selectedLang,
-                mode: selectedMode
-            });
-            if (currentSessionId && currentSessionId !== "None") {
-                localStorage.setItem('chat_lock_' + currentSessionId, data);
-            } else {
-                sessionStorage.setItem('new_chat_selection', data);
-            }
-        }
-
-        function handleAttachClick() {
-            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
-            if (!isUnlocked) {
-                alert("Please select Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt before uploading a file!");
-                return;
-            }
-            document.getElementById('file_input').click();
-        }
-
-        function updateLockState() {
-            const promptInput = document.getElementById("prompt");
-            const sendBtn = document.getElementById("send-btn");
-            const lockNotice = document.getElementById("lockNotice");
-
-            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
-            sendBtn.disabled = !isUnlocked;
-
-            if (isUnlocked) {
-                promptInput.placeholder = `Ask for ${selectedMode} in ${selectedSubject}...`;
-                sendBtn.style.opacity = "1";
-                sendBtn.style.cursor = "pointer";
-                lockNotice.style.display = "none";
-            } else {
-                if (!selectedSubject) {
-                    promptInput.placeholder = "Type subject name (e.g. Zoology) or select above...";
-                } else if (!selectedCourse) {
-                    promptInput.placeholder = "Please select Honours or General above...";
-                } else if (!selectedLang) {
-                    promptInput.placeholder = "Please select Language (Bengali / English) above...";
-                } else {
-                    promptInput.placeholder = "Please select Notes / Question Answer / Doubt Solve above...";
-                }
-                sendBtn.style.opacity = "0.35";
-                sendBtn.style.cursor = "not-allowed";
-                lockNotice.style.display = "block";
-            }
-            syncChatBoxBottom();
-        }
-
-        window.addEventListener("DOMContentLoaded", () => {
-            document.querySelectorAll('.raw-bot-msg').forEach(el => {
-                const rawContent = el.textContent;
-                el.innerHTML = formatBotResponse(rawContent);
-            });
-
-            let restored = false;
-            if (currentSessionId && currentSessionId !== "None") {
-                const saved = localStorage.getItem('chat_lock_' + currentSessionId);
-                if (saved) {
-                    try {
-                        const parsed = JSON.parse(saved);
-                        selectedSubject = parsed.subject;
-                        selectedCourse = parsed.course;
-                        selectedLang = parsed.lang;
-                        selectedMode = parsed.mode || "Notes";
-                        restored = true;
-                    } catch (e) {}
-                }
-
-                if (!restored) {
-                    const firstUserTextEl = document.querySelector('.user-msg .text-content');
-                    if (firstUserTextEl) {
-                        const txt = firstUserTextEl.innerText;
-                        const match4 = txt.match(/\[(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\]/);
-                        const match3 = txt.match(/\[(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\]/);
-                        if (match4) {
-                            selectedSubject = match4[1].replace(/Subject:\s*/i, '').trim();
-                            selectedCourse = match4[2].replace(/Course:\s*/i, '').trim();
-                            selectedLang = match4[3].replace(/Language:\s*/i, '').trim();
-                            selectedMode = match4[4].replace(/Mode:\s*/i, '').trim();
-                            restored = true;
-                        } else if (match3) {
-                            selectedSubject = match3[1].replace(/Subject:\s*/i, '').trim();
-                            selectedCourse = match3[2].replace(/Course:\s*/i, '').trim();
-                            selectedLang = match3[3].replace(/Language:\s*/i, '').trim();
-                            selectedMode = "Notes";
-                            restored = true;
-                        }
-                    }
-                }
-            }
-
-            if (restored && selectedSubject && selectedCourse && selectedLang) {
-                saveSessionSelection();
-                activateLockedChatMode();
-            } else {
-                updateLockState();
-            }
-
-            syncChatBoxBottom();
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
-
-        function getCurrentTime() {
-            return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-        }
-
-        function copyText(btn) {
-            const content = btn.closest('.message').querySelector('.msg-content').innerText;
-            navigator.clipboard.writeText(content);
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="#0D8ABC"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-            setTimeout(() => {
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
-            }, 2000);
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('open');
-        }
-
-        function showFileName() {
-            const file = document.getElementById('file_input').files[0];
-            const previewContainer = document.getElementById('image-preview-container');
-            const previewImg = document.getElementById('image-preview');
-            
-            if(file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    previewContainer.style.display = 'block';
-                    syncChatBoxBottom();
-                }
-                reader.readAsDataURL(file);
-            } else {
-                previewContainer.style.display = 'none';
-                syncChatBoxBottom();
-            }
-        }
-        function clearImagePreview() {
-            document.getElementById('file_input').value = '';
-            document.getElementById('image-preview-container').style.display = 'none';
-            syncChatBoxBottom();
-        }
-
-        function openModal(imgSrc) {
-            document.getElementById('modal-img').src = imgSrc;
-            document.getElementById('image-modal').style.display = 'flex';
-        }
-
-        function appendUserMessage(text, imgFile, msgId) {
-            const timeNow = getCurrentTime();
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'message-row user-row';
-            rowDiv.id = `row-${msgId}`;
-            
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'message user-msg';
-            
-            let contentHTML = `<div class="msg-content" id="msg-${msgId}">`;
-            if (imgFile) {
-                const imgURL = URL.createObjectURL(imgFile);
-                contentHTML += `<img src="${imgURL}" class="chat-image" onclick="openModal(this.src)"><br>`;
-            }
-            contentHTML += `<span class="text-content">${text}</span></div>`;
-            
-            contentHTML += `
-            <div class="msg-footer" style="justify-content: flex-end;">
-                <span class="msg-time">${timeNow}</span>
-                <button class="action-icon" id="edit-btn-${msgId}" onclick="startEdit('${msgId}')" title="Edit Message">
-                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                </button>
-            </div>`;
-            
-            msgDiv.innerHTML = contentHTML;
-            rowDiv.appendChild(msgDiv);
-            chatBox.appendChild(rowDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function showTypingIndicator(msgId) {
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'message-row bot-row';
-            rowDiv.id = `bot-row-${msgId}`;
-
-            const headerDiv = document.createElement('div');
-            headerDiv.className = 'bot-header-line';
-            headerDiv.innerHTML = '<img src="/static/bot.png" alt="AI"> AI Notes';
-
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'message bot-msg';
-            
-            msgDiv.innerHTML = `
-            <div class="msg-content" style="color:#666; font-style:italic;">
-                <div class="typing-spinner" style="margin-right: 8px;"></div> AI is analyzing...
-            </div>
-            <div class="msg-footer" id="footer-${msgId}" style="display:none;">
-                <span class="msg-time">${getCurrentTime()}</span>
-                <button class="action-icon" title="Good response"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
-                <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
-                <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
-                <button class="action-icon" title="Regenerate"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
-            </div>
-            <div class="ai-disclaimer" id="disc-${msgId}" style="display:none;">AI Notes is AI and can make mistakes.</div>`;
-
-            rowDiv.appendChild(headerDiv);
-            rowDiv.appendChild(msgDiv);
-            chatBox.appendChild(rowDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function startEdit(msgId) {
-            const textSpan = document.querySelector(`#msg-${msgId} .text-content`);
-            if(!textSpan) return;
-            const currentText = textSpan.innerText;
-            
-            const editHTML = `
-                <textarea id="edit-input-${msgId}" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;">${currentText}</textarea>
-                <div style="margin-top: 5px; text-align: right;">
-                    <button onclick="cancelEdit('${msgId}')" style="padding: 5px 10px; cursor: pointer; border: none; background: #eee; border-radius: 5px; margin-right: 5px;">Cancel</button>
-                    <button onclick="submitEdit('${msgId}')" style="padding: 5px 10px; cursor: pointer; border: none; background: #0D8ABC; color: white; border-radius: 5px;">Save</button>
-                </div>
-            `;
-            textSpan.style.display = 'none';
-            
-            const editContainer = document.createElement('div');
-            editContainer.id = `edit-container-${msgId}`;
-            editContainer.innerHTML = editHTML;
-            document.getElementById(`msg-${msgId}`).appendChild(editContainer);
-        }
-
-        function cancelEdit(msgId) {
-            document.getElementById(`edit-container-${msgId}`).remove();
-            document.querySelector(`#msg-${msgId} .text-content`).style.display = 'inline';
-        }
-
-        async function submitEdit(msgId) {
-            const newText = document.getElementById(`edit-input-${msgId}`).value.trim();
-            if(!newText) return;
-
-            document.getElementById(`edit-container-${msgId}`).remove();
-            const textSpan = document.querySelector(`#msg-${msgId} .text-content`);
-            textSpan.innerText = newText;
-            textSpan.style.display = 'inline';
-            
-            const botMsgContent = document.querySelector(`#bot-row-${msgId} .msg-content`);
-            botMsgContent.innerHTML = '<div class="typing-spinner" style="margin-right: 8px;"></div> AI is updating...';
-            botMsgContent.style.color = "#666";
-            botMsgContent.style.fontStyle = "italic";
-            
-            let fullPrompt = newText;
-            if (selectedSubject && selectedCourse && selectedLang && selectedMode && !newText.startsWith("[Subject:")) {
-                fullPrompt = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang} ➔ Mode: ${selectedMode}] ${newText}`;
-            }
-
-            const formData = new FormData();
-            formData.append('prompt', fullPrompt);
-            formData.append('session_id', currentSessionId);
-            formData.append('msg_id', msgId);
-
-            try {
-                const response = await fetch('/edit_chat', { method: 'POST', body: formData });
-                const data = await response.json();
-                
-                if(data.error) {
-                    botMsgContent.innerHTML = "Error: " + data.error;
-                    botMsgContent.style.color = "red";
-                } else {
-                    botMsgContent.innerHTML = formatBotResponse(data.response);
-                    botMsgContent.style.color = "inherit";
-                    botMsgContent.style.fontStyle = "normal";
-                }
-            } catch (err) {
-                botMsgContent.innerHTML = "System Error.";
-                botMsgContent.style.color = "red";
-            }
-        }
-
-        async function sendMessage() {
-            if (!selectedSubject || !selectedCourse || !selectedLang || !selectedMode) {
-                alert("Please select Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt before sending a message!");
-                return;
-            }
-
-            const promptInput = document.getElementById('prompt');
-            const fileInput = document.getElementById('file_input');
-            const sendBtn = document.getElementById('send-btn');
-            
-            const prompt = promptInput.value.trim();
-            const file = fileInput.files[0];
-            if (!prompt && !file) return;
-
-            const displayPrompt = `[${selectedSubject} ➔ ${selectedCourse} ➔ ${selectedLang} ➔ ${selectedMode}] ${prompt}`;
-            const fullPromptForAI = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang} ➔ Mode: ${selectedMode}] ${prompt}`;
-
-            const tempId = "temp-" + Date.now();
-            appendUserMessage(displayPrompt, file, tempId);
-            
-            promptInput.value = '';
-            clearImagePreview();
-
-            sendBtn.innerHTML = '<div class="btn-spinner"></div>';
-            sendBtn.disabled = true;
-            
-            showTypingIndicator(tempId);
-
-            const formData = new FormData();
-            formData.append('prompt', fullPromptForAI);
-            formData.append('session_id', currentSessionId);
-            if (file) formData.append('file', file);
-
-            try {
-                const response = await fetch('/chat', { method: 'POST', body: formData });
-                const data = await response.json();
-                
-                sendBtn.innerHTML = '↑';
-                sendBtn.disabled = false;
-                
-                const botMsgContent = document.querySelector(`#bot-row-${tempId} .msg-content`);
-                const botMsgFooter = document.getElementById(`footer-${tempId}`);
-                const botMsgDisc = document.getElementById(`disc-${tempId}`);
-                
-                if(data.error) {
-                    botMsgContent.innerHTML = "Error: " + data.error;
-                    botMsgContent.style.color = "red";
-                } else {
-                    document.getElementById(`row-${tempId}`).id = `row-${data.msg_id}`;
-                    document.getElementById(`msg-${tempId}`).id = `msg-${data.msg_id}`;
-                    const editBtn = document.getElementById(`edit-btn-${tempId}`);
-                    editBtn.id = `edit-btn-${data.msg_id}`;
-                    editBtn.setAttribute('onclick', `startEdit('${data.msg_id}')`);
-                    document.getElementById(`bot-row-${tempId}`).id = `bot-row-${data.msg_id}`;
-                    
-                    botMsgFooter.id = `footer-${data.msg_id}`;
-                    botMsgFooter.style.display = "flex";
-                    if (botMsgDisc) {
-                        botMsgDisc.id = `disc-${data.msg_id}`;
-                        botMsgDisc.style.display = "block";
-                    }
-                    
-                    botMsgContent.innerHTML = formatBotResponse(data.response);
-                    botMsgContent.style.color = "inherit";
-                    botMsgContent.style.fontStyle = "normal";
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                    
-                    if (currentSessionId === "None" || !currentSessionId) {
-                        currentSessionId = data.session_id;
-                        saveSessionSelection();
-                        window.history.pushState(null, '', '/?session_id=' + data.session_id);
-                        setTimeout(() => location.reload(), 2500); 
-                    }
-                }
-            } catch (err) {
-                sendBtn.innerHTML = '↑';
-                sendBtn.disabled = false;
-                const botMsgContent = document.querySelector(`#bot-row-${tempId} .msg-content`);
-                botMsgContent.innerHTML = "System Error. Please try again.";
-                botMsgContent.style.color = "red";
-            }
-        }
-
-        document.getElementById('prompt').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    </script>
+    <!-- Image Zoom Modal -->
+    <div id="image-modal" onclick="this.style.display='none'">
+        <img id="modal-img" src="">
+    </div>
+
+    <!-- Modal for Viewing Full Chat Name or Renaming Chat -->
+    <div id="chat-info-modal" onclick="if(event.target===this) closeChatModal()">
+        <div class="chat-modal-card">
+            <div id="chat-modal-title" style="font-weight: 700; font-size: 16px; margin-bottom: 10px; color: #0f172a;">Chat Details</div>
+            <div id="chat-modal-view-body" style="display: none; font-size: 14.5px; color: #334155; line-height: 1.5; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; word-break: break-word;"></div>
+            <div id="chat-modal-rename-body" style="display: none;">
+                <input type="text" id="rename-chat-input" style="width: 100%; padding: 10px; border: 1.5px solid #0D8ABC; border-radius: 8px; font-size: 14.5px; outline: none;">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+                <button type="button" onclick="closeChatModal()" style="padding: 7px 14px; border: none; background: #e2e8f0; color: #334155; border-radius: 8px; font-weight: 600; cursor: pointer;">Close</button>
+                <button type="button" id="save-rename-btn" onclick="saveChatRename()" style="display: none; padding: 7px 14px; border: none; background: #0D8ABC; color: #ffffff; border-radius: 8px; font-weight: 600; cursor: pointer;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOICE PAGE MODAL -->
+    <div id="voice-page-modal">
+        <div style="font-size: 16px; font-weight: 600; opacity: 0.85;">AI Notes Voice Mode</div>
+        <div class="voice-orb-container">
+            <div class="voice-orb"></div>
+            <p style="margin-top: 30px; font-size: 18px; font-weight: 500; color: #e2e8f0;">Listening...</p>
+            <span style="font-size: 13px; color: #94a3b8; margin-top: 4px;">(Voice conversation feature coming soon)</span>
+        </div>
+        <button class="close-voice-page" onclick="closeVoicePage()" title="Close Voice Mode">×</button>
+    </div>
+
+    <div id="overlay" onclick="toggleSidebar()"></div>
+    
+    <div id="sidebar">
+        <button class="close-sidebar" onclick="toggleSidebar()">×</button>
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 19px; margin-bottom: 16px; margin-top: 2px;">
+            <img src="/static/bot.png" style="width: 28px; height: 28px; border-radius: 5px;"> AI Notes
+        </div>
+        <div class="sidebar-item" onclick="startNewChat()" style="background: #eef2f5; font-weight: bold; color: #0D8ABC; margin-bottom: 10px;">➕ New Chat</div>
+        
+        <!-- Search Input Box above Chat History -->
+        <input type="text" id="chatSearchInput" class="chat-search-box" placeholder="🔍 Search chat history..." oninput="filterChatHistory(this.value)">
+
+        <div style="font-size: 11.5px; color: #64748b; font-weight: 700; padding-left: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px;">Chat History</div>
+        
+        <!-- Compact Chat History List with Three-Dot Menu -->
+        <div style="flex: 1; overflow-y: auto; padding-right: 2px;" id="sidebarHistoryList">
+            {% for s in sidebar_sessions %}
+                <div class="history-item-row {% if s.id == current_session %}active-session{% endif %}" data-title="{{ s.title | lower }}" onclick="window.location.href='/?session_id={{ s.id }}'">
+                    <div class="history-title-text" id="sess-title-{{ s.id }}">💬 {{ s.title }}</div>
+                    <button type="button" class="three-dot-btn" onclick="toggleChatOptMenu(event, '{{ s.id }}')" title="Options">⋮</button>
+                    
+                    <!-- Popup Menu for View & Rename -->
+                    <div class="chat-opt-menu" id="opt-menu-{{ s.id }}" onclick="event.stopPropagation()">
+                        <button type="button" class="chat-opt-btn" onclick="openViewChatModal('{{ s.id }}')">👁️ View</button>
+                        <button type="button" class="chat-opt-btn" onclick="openRenameChatModal('{{ s.id }}')">✏️ Rename</button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+            <a href="/logout" style="text-decoration: none; color: #d93025;"><div class="sidebar-item">🚪 Logout</div></a>
+            <!-- Clickable Upgrade to Plus Link -->
+            <a href="/upgrade" style="text-decoration: none;">
+                <div class="sidebar-item" style="background: linear-gradient(90deg, #ff8a00, #e52e71); color: white; text-align: center; font-weight: bold; box-shadow: 0 4px 10px rgba(229,46,113,0.3); cursor: pointer;">⭐ Upgrade to Plus</div>
+            </a>
+            <div style="font-size: 11.5px; color: #64748b; text-align: center; margin-top: 8px; word-break: break-all;">👤 {{ user_email }}</div>
+        </div>
+    </div>
+
+    <!-- 1. FIXED TOP HEADER (With Token Balance below AI Notes) -->
+    <div id="header">
+        <div style="display: flex; align-items: center;">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div style="display: flex; align-items: center; gap: 9px;">
+                <img src="/static/bot.png" style="width: 28px; height: 28px; border-radius: 6px;" alt="AI">
+                <div class="header-title-wrap">
+                    <span>AI Notes</span>
+                    <span class="token-badge-sub" id="token-badge-wrap">
+                        ⚡ <span id="header-token-count">{{ remaining_tokens if remaining_tokens is defined else 2000 }}</span> / 2000 Tokens
+                    </span>
+                </div>
+            </div>
+        </div>
+        <button class="new-chat-btn" onclick="startNewChat()" title="New Chat">➕</button>
+    </div>
+
+    <!-- 2. FIXED MIDDLE CHAT DISPLAY -->
+    <div id="chat-box">
+        {% if history %}
+            {% for chat in history %}
+                <!-- User Message -->
+                <div class="message-row user-row" id="row-{{ chat.id }}">
+                    <div class="message user-msg">
+                        <div class="msg-content" id="msg-{{ chat.id }}">
+                            {% if chat.img_url %}
+                                <img src="{{ chat.img_url }}" class="chat-image" onclick="openModal(this.src)"><br>
+                            {% endif %}
+                            <span class="text-content">{{ chat.user_msg }}</span>
+                        </div>
+                        <div class="msg-footer" style="justify-content: flex-end;">
+                            <span class="msg-time">Today</span>
+                            <button class="action-icon" id="edit-btn-{{ chat.id }}" onclick="startEdit('{{ chat.id }}')" title="Edit Message">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI Message -->
+                <div class="message-row bot-row" id="bot-row-{{ chat.id }}">
+                    <div class="bot-header-line">
+                        <img src="/static/bot.png" alt="AI"> AI Notes
+                    </div>
+                    <div class="message bot-msg">
+                        <div class="msg-content raw-bot-msg">{{ chat.ai_msg }}</div>
+                        <div class="msg-footer">
+                            <span class="msg-time">Today</span>
+                            <button class="action-icon" title="Good response"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
+                            <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
+                            <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
+                            <button class="action-icon" title="Regenerate response"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+                        </div>
+                        <div class="ai-disclaimer">AI Notes is AI and can make mistakes.</div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- 3. FIXED BOTTOM FOOTER MESSAGE SECTION -->
+    <div id="input-container">
+        <div class="selector-wrapper">
+            <!-- 1. Subject List -->
+            <div id="subjectDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt subject-opt" data-name="Zoology" onclick="chooseSubject('Zoology')">🦋 Zoology <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Botany" onclick="chooseSubject('Botany')">🌿 Botany <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Biochemistry" onclick="chooseSubject('Biochemistry')">🧬 Biochemistry <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Chemistry" onclick="chooseSubject('Chemistry')">⚗️ Chemistry <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Physics" onclick="chooseSubject('Physics')">⚛️ Physics <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Physiology" onclick="chooseSubject('Physiology')">🫀 Physiology <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Mathematics" onclick="chooseSubject('Mathematics')">📐 Mathematics <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Computer Science" onclick="chooseSubject('Computer Science')">💻 Computer Science <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="History" onclick="chooseSubject('History')">🏛️ History <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Geography" onclick="chooseSubject('Geography')">🌍 Geography <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Political Science" onclick="chooseSubject('Political Science')">⚖️ Political Science <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Philosophy" onclick="chooseSubject('Philosophy')">💡 Philosophy <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Education" onclick="chooseSubject('Education')">🎓 Education <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Sanskrit" onclick="chooseSubject('Sanskrit')">📜 Sanskrit <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Bengali" onclick="chooseSubject('Bengali')">📖 Bengali <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="English" onclick="chooseSubject('English')">🔤 English <span>➔</span></div>
+                <div class="dropdown-item-opt subject-opt" data-name="Environmental Science" onclick="chooseSubject('Environmental Science')">🌱 Env. Science <span>➔</span></div>
+            </div>
+
+            <!-- 2. Honours / General List -->
+            <div id="courseDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt" onclick="chooseCourse('Honours')">🎓 Honours <span>➔</span></div>
+                <div class="dropdown-item-opt" onclick="chooseCourse('General')">📘 General / MDC <span>➔</span></div>
+            </div>
+
+            <!-- 3. Language List -->
+            <div id="langDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt" onclick="chooseLanguage('Bengali')">🗣️ Bengali <span>➔</span></div>
+                <div class="dropdown-item-opt" onclick="chooseLanguage('English')">🗣️ English <span>➔</span></div>
+            </div>
+
+            <!-- 4. Mode List -->
+            <div id="modeDropdown" class="dropdown-menu-list">
+                <div class="dropdown-item-opt" onclick="chooseMode('Notes')">📝 Notes <span>✓</span></div>
+                <div class="dropdown-item-opt" onclick="chooseMode('Question Answer')">❓ Question Answer <span>✓</span></div>
+                <div class="dropdown-item-opt" onclick="chooseMode('Doubt Solve')">💡 Doubt Solve <span>✓</span></div>
+            </div>
+
+            <!-- Initial Setup Bar -->
+            <div id="initialSetupBar" class="selector-bar">
+                <button type="button" id="mainSubjectBtn" class="select-btn" onclick="toggleSubjectList()">
+                    📚 Select Subject <span>▾</span>
+                </button>
+
+                <button type="button" id="courseTypeBtn" class="select-btn" style="display:none;" onclick="toggleCourseList()">
+                    🎓 Honours / General <span>▾</span>
+                </button>
+
+                <button type="button" id="langTypeBtn" class="select-btn" style="display:none;" onclick="toggleLangList()">
+                    🗣️ Language (Bengali / English) <span>▾</span>
+                </button>
+
+                <button type="button" id="modeTypeBtn" class="select-btn" style="display:none;" onclick="toggleModeList()">
+                    📝 Notes / Q&A / Doubt <span>▾</span>
+                </button>
+
+                <div id="selectedBadge" class="selected-tag-box">
+                    <span id="badgeText"></span>
+                </div>
+            </div>
+
+            <!-- Locked Chat Mode Switcher Bar -->
+            <div id="lockedModeBar">
+                <div class="locked-subject-info" id="lockedInfoText"></div>
+                <div class="mode-Switch-group">
+                    <button type="button" class="mode-pill-btn" id="pill-Notes" onclick="switchActiveMode('Notes')">📝 Notes</button>
+                    <button type="button" class="mode-pill-btn" id="pill-Question Answer" onclick="switchActiveMode('Question Answer')">❓ Question Answer</button>
+                    <button type="button" class="mode-pill-btn" id="pill-Doubt Solve" onclick="switchActiveMode('Doubt Solve')">💡 Doubt Solve</button>
+                </div>
+            </div>
+
+            <div id="lockNotice" class="lock-warning">
+                ⚠️ Please select <b>Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt</b> before sending a message.
+            </div>
+        </div>
+
+        <div id="image-preview-container" style="display: none; position: relative; margin-bottom: 10px; width: fit-content; padding-left: 10px;">
+            <img id="image-preview" src="" style="width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 2px solid #0D8ABC;">
+            <button onclick="clearImagePreview()" style="position: absolute; top: -8px; right: -8px; background: #d93025; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-weight: bold;">×</button>
+        </div>
+        
+        <div id="form-wrapper">
+            <input type="file" id="file_input" accept="image/*, .pdf" style="display: none;" onchange="showFileName()">
+            <button class="attach-btn" id="attach-btn" type="button" onclick="handleAttachClick()">📎</button>
+            <textarea id="prompt" placeholder="Type subject name (e.g. Zoology) or select above..." oninput="handlePromptTyping(this.value)"></textarea>
+            
+            <button class="send-btn" id="send-btn" type="button" onclick="sendMessage()" title="Send Message">↑</button>
+            
+            <button class="voice-anim-btn" id="voice-btn" type="button" onclick="openVoicePage()" title="Open Voice Mode">
+                <span class="voice-bar"></span>
+                <span class="voice-bar"></span>
+                <span class="voice-bar"></span>
+                <span class="voice-bar"></span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const inputContainer = document.getElementById('input-container');
+        let currentSessionId = "{{ current_session }}";
+        let activeModalSessionId = null;
+
+        // Update Header Token Display
+        function updateHeaderTokens(remTokens) {
+            if (remTokens === undefined || remTokens === null) return;
+            const countEl = document.getElementById('header-token-count');
+            const wrapEl = document.getElementById('token-badge-wrap');
+            if (countEl) countEl.innerText = remTokens;
+            if (wrapEl) {
+                wrapEl.style.color = (remTokens <= 0) ? '#dc2626' : '#0D8ABC';
+            }
+        }
+
+        // Sidebar Chat Search Filter
+        function filterChatHistory(query) {
+            const q = query.trim().toLowerCase();
+            document.querySelectorAll('#sidebarHistoryList .history-item-row').forEach(row => {
+                const title = row.getAttribute('data-title') || '';
+                row.style.display = title.includes(q) ? 'flex' : 'none';
+            });
+        }
+
+        // Three-Dot Menu Toggle
+        function closeAllChatOptMenus() {
+            document.querySelectorAll('.chat-opt-menu').forEach(m => m.style.display = 'none');
+        }
+        function toggleChatOptMenu(e, sessId) {
+            e.stopPropagation();
+            const menu = document.getElementById('opt-menu-' + sessId);
+            const isOpen = menu.style.display === 'block';
+            closeAllChatOptMenus();
+            menu.style.display = isOpen ? 'none' : 'block';
+        }
+        document.addEventListener('click', closeAllChatOptMenus);
+
+        // View Full Chat Name Modal
+        function openViewChatModal(sessId) {
+            closeAllChatOptMenus();
+            const titleEl = document.getElementById('sess-title-' + sessId);
+            const fullTitle = titleEl ? titleEl.innerText.replace(/^💬\s*/, '') : '';
+            document.getElementById('chat-modal-title').innerText = 'Full Chat Name';
+            const viewBody = document.getElementById('chat-modal-view-body');
+            viewBody.innerText = fullTitle;
+            viewBody.style.display = 'block';
+            document.getElementById('chat-modal-rename-body').style.display = 'none';
+            document.getElementById('save-rename-btn').style.display = 'none';
+            document.getElementById('chat-info-modal').style.display = 'flex';
+        }
+
+        // Rename Chat Modal
+        function openRenameChatModal(sessId) {
+            closeAllChatOptMenus();
+            activeModalSessionId = sessId;
+            const titleEl = document.getElementById('sess-title-' + sessId);
+            const currentTitle = titleEl ? titleEl.innerText.replace(/^💬\s*/, '') : '';
+            document.getElementById('chat-modal-title').innerText = 'Rename Chat';
+            document.getElementById('chat-modal-view-body').style.display = 'none';
+            document.getElementById('chat-modal-rename-body').style.display = 'block';
+            document.getElementById('save-rename-btn').style.display = 'inline-block';
+            const input = document.getElementById('rename-chat-input');
+            input.value = currentTitle;
+            document.getElementById('chat-info-modal').style.display = 'flex';
+            input.focus();
+        }
+
+        function closeChatModal() {
+            document.getElementById('chat-info-modal').style.display = 'none';
+            activeModalSessionId = null;
+        }
+
+        async function saveChatRename() {
+            const newTitle = document.getElementById('rename-chat-input').value.trim();
+            if (!newTitle || !activeModalSessionId) return;
+            try {
+                const res = await fetch('/rename_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: activeModalSessionId, new_title: newTitle })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const titleEl = document.getElementById('sess-title-' + activeModalSessionId);
+                    if (titleEl) {
+                        titleEl.innerText = '💬 ' + data.new_title;
+                        titleEl.closest('.history-item-row').setAttribute('data-title', data.new_title.toLowerCase());
+                    }
+                    closeChatModal();
+                }
+            } catch (e) {
+                alert('Could not rename chat.');
+            }
+        }
+
+        function syncChatBoxBottom() {
+            if (inputContainer && chatBox) {
+                chatBox.style.bottom = inputContainer.offsetHeight + 'px';
+            }
+        }
+        if (window.ResizeObserver) {
+            new ResizeObserver(syncChatBoxBottom).observe(inputContainer);
+        }
+        window.addEventListener('resize', syncChatBoxBottom);
+
+        function formatBotResponse(rawText) {
+            if (!rawText) return "";
+            let cleaned = rawText.replace(/<\/?u>/gi, "");
+
+            const openTables = (cleaned.match(/<table/gi) || []).length;
+            const closeTables = (cleaned.match(/<\/table>/gi) || []).length;
+            if (openTables > closeTables) {
+                cleaned += "</td></tr></tbody></table></div>";
+            }
+
+            cleaned = cleaned.replace(/<table[\s\S]*?<\/table>/gi, function(tableMatch) {
+                let compactTable = tableMatch.replace(/\r?\n/g, " ");
+                return `<div class="table-scroll-box">${compactTable}</div>`;
+            });
+            cleaned = cleaned.replace(/<div class="table-scroll-box">\s*<div class="table-scroll-box">/g, '<div class="table-scroll-box">');
+            cleaned = cleaned.replace(/<\/table><\/div>\s*<\/div>/g, '</table></div>');
+            cleaned = cleaned.replace(/\n/g, "<br>");
+
+            const safeIsolator = document.createElement('div');
+            safeIsolator.innerHTML = cleaned;
+            return safeIsolator.innerHTML;
+        }
+
+        function openVoicePage() {
+            document.getElementById('voice-page-modal').style.display = 'flex';
+        }
+        function closeVoicePage() {
+            document.getElementById('voice-page-modal').style.display = 'none';
+        }
+
+        // === SESSION-LOCKED SELECTION LOGIC ===
+        let selectedSubject = "";
+        let selectedCourse = "";
+        let selectedLang = "";
+        let selectedMode = "";
+
+        function startNewChat() {
+            sessionStorage.removeItem('new_chat_selection');
+            window.location.href = '/';
+        }
+
+        function closeAllDropdowns() {
+            document.getElementById("subjectDropdown").style.display = "none";
+            document.getElementById("courseDropdown").style.display = "none";
+            document.getElementById("langDropdown").style.display = "none";
+            document.getElementById("modeDropdown").style.display = "none";
+        }
+
+        function resetSubjectFilter() {
+            document.querySelectorAll('.subject-opt').forEach(item => item.style.display = 'flex');
+        }
+
+        function toggleSubjectList() {
+            const el = document.getElementById("subjectDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            resetSubjectFilter();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function toggleCourseList() {
+            const el = document.getElementById("courseDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function toggleLangList() {
+            const el = document.getElementById("langDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function toggleModeList() {
+            const el = document.getElementById("modeDropdown");
+            const isOpen = el.style.display === "block";
+            closeAllDropdowns();
+            el.style.display = isOpen ? "none" : "block";
+        }
+
+        function handlePromptTyping(val) {
+            const query = val.trim().toLowerCase();
+            if (!selectedSubject) {
+                const dropdown = document.getElementById("subjectDropdown");
+                const items = document.querySelectorAll('.subject-opt');
+                if (query.length > 0) {
+                    let anyVisible = false;
+                    items.forEach(item => {
+                        const subName = item.getAttribute('data-name').toLowerCase();
+                        if (subName.includes(query)) {
+                            item.style.display = 'flex';
+                            anyVisible = true;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                    dropdown.style.display = anyVisible ? 'block' : 'none';
+                } else {
+                    resetSubjectFilter();
+                    dropdown.style.display = 'none';
+                }
+            }
+        }
+
+        function chooseSubject(sub) {
+            selectedSubject = sub;
+            selectedCourse = "";
+            selectedLang = "";
+            selectedMode = "";
+            closeAllDropdowns();
+            resetSubjectFilter();
+
+            document.getElementById("prompt").value = "";
+            document.getElementById("mainSubjectBtn").style.display = "none";
+            document.getElementById("selectedBadge").style.display = "inline-flex";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ <span style="color:#d97706;">(Select Honours/General)</span>`;
+
+            document.getElementById("courseTypeBtn").style.display = "inline-flex";
+            document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("modeTypeBtn").style.display = "none";
+            document.getElementById("courseDropdown").style.display = "block";
+            updateLockState();
+        }
+
+        function chooseCourse(course) {
+            selectedCourse = course;
+            selectedLang = "";
+            selectedMode = "";
+            closeAllDropdowns();
+
+            document.getElementById("prompt").value = "";
+            document.getElementById("courseTypeBtn").style.display = "none";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ <span style="color:#d97706;">(Select Language)</span>`;
+
+            document.getElementById("langTypeBtn").style.display = "inline-flex";
+            document.getElementById("modeTypeBtn").style.display = "none";
+            document.getElementById("langDropdown").style.display = "block";
+            updateLockState();
+        }
+
+        function chooseLanguage(lang) {
+            selectedLang = lang;
+            selectedMode = "";
+            closeAllDropdowns();
+
+            document.getElementById("prompt").value = "";
+            document.getElementById("langTypeBtn").style.display = "none";
+            document.getElementById("badgeText").innerHTML = `📚 ${selectedSubject} ➔ 🎓 ${selectedCourse} ➔ 🗣️ ${selectedLang} ➔ <span style="color:#d97706;">(Select Mode)</span>`;
+
+            document.getElementById("modeTypeBtn").style.display = "inline-flex";
+            document.getElementById("modeDropdown").style.display = "block";
+            updateLockState();
+        }
+
+        function chooseMode(mode) {
+            selectedMode = mode;
+            closeAllDropdowns();
+            document.getElementById("prompt").value = "";
+
+            saveSessionSelection();
+            activateLockedChatMode();
+            document.getElementById("prompt").focus();
+        }
+
+        function switchActiveMode(mode) {
+            selectedMode = mode;
+            saveSessionSelection();
+
+            document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
+            const activeBtn = document.getElementById(`pill-${mode}`);
+            if (activeBtn) activeBtn.classList.add('active-mode');
+
+            updateLockState();
+            document.getElementById("prompt").focus();
+        }
+
+        function activateLockedChatMode() {
+            document.getElementById("initialSetupBar").style.display = "none";
+            document.getElementById("lockedModeBar").style.display = "flex";
+            document.getElementById("lockedInfoText").innerHTML = `
+                <span>🔒 <b>${selectedSubject}</b> ➔ <b>${selectedCourse}</b> ➔ <b>${selectedLang}</b></span>
+                <span style="color:#64748b; font-size:12px; font-weight:500;">(➕ New Chat for other subject)</span>
+            `;
+
+            document.querySelectorAll('.mode-pill-btn').forEach(btn => btn.classList.remove('active-mode'));
+            const activeBtn = document.getElementById(`pill-${selectedMode}`);
+            if (activeBtn) activeBtn.classList.add('active-mode');
+
+            updateLockState();
+            syncChatBoxBottom();
+        }
+
+        function saveSessionSelection() {
+            const data = JSON.stringify({
+                subject: selectedSubject,
+                course: selectedCourse,
+                lang: selectedLang,
+                mode: selectedMode
+            });
+            if (currentSessionId && currentSessionId !== "None") {
+                localStorage.setItem('chat_lock_' + currentSessionId, data);
+            } else {
+                sessionStorage.setItem('new_chat_selection', data);
+            }
+        }
+
+        function handleAttachClick() {
+            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
+            if (!isUnlocked) {
+                alert("Please select Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt before uploading a file!");
+                return;
+            }
+            document.getElementById('file_input').click();
+        }
+
+        function updateLockState() {
+            const promptInput = document.getElementById("prompt");
+            const sendBtn = document.getElementById("send-btn");
+            const lockNotice = document.getElementById("lockNotice");
+
+            const isUnlocked = (selectedSubject !== "" && selectedCourse !== "" && selectedLang !== "" && selectedMode !== "");
+            sendBtn.disabled = !isUnlocked;
+
+            if (isUnlocked) {
+                promptInput.placeholder = `Ask for ${selectedMode} in ${selectedSubject}...`;
+                sendBtn.style.opacity = "1";
+                sendBtn.style.cursor = "pointer";
+                lockNotice.style.display = "none";
+            } else {
+                if (!selectedSubject) {
+                    promptInput.placeholder = "Type subject name (e.g. Zoology) or select above...";
+                } else if (!selectedCourse) {
+                    promptInput.placeholder = "Please select Honours or General above...";
+                } else if (!selectedLang) {
+                    promptInput.placeholder = "Please select Language (Bengali / English) above...";
+                } else {
+                    promptInput.placeholder = "Please select Notes / Question Answer / Doubt Solve above...";
+                }
+                sendBtn.style.opacity = "0.35";
+                sendBtn.style.cursor = "not-allowed";
+                lockNotice.style.display = "block";
+            }
+            syncChatBoxBottom();
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll('.raw-bot-msg').forEach(el => {
+                const rawContent = el.textContent;
+                el.innerHTML = formatBotResponse(rawContent);
+            });
+
+            let restored = false;
+            if (currentSessionId && currentSessionId !== "None") {
+                const saved = localStorage.getItem('chat_lock_' + currentSessionId);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        selectedSubject = parsed.subject;
+                        selectedCourse = parsed.course;
+                        selectedLang = parsed.lang;
+                        selectedMode = parsed.mode || "Notes";
+                        restored = true;
+                    } catch (e) {}
+                }
+
+                if (!restored) {
+                    const firstUserTextEl = document.querySelector('.user-msg .text-content');
+                    if (firstUserTextEl) {
+                        const txt = firstUserTextEl.innerText;
+                        const match4 = txt.match(/\[(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\]/);
+                        const match3 = txt.match(/\[(.*?)\s*➔\s*(.*?)\s*➔\s*(.*?)\]/);
+                        if (match4) {
+                            selectedSubject = match4[1].replace(/Subject:\s*/i, '').trim();
+                            selectedCourse = match4[2].replace(/Course:\s*/i, '').trim();
+                            selectedLang = match4[3].replace(/Language:\s*/i, '').trim();
+                            selectedMode = match4[4].replace(/Mode:\s*/i, '').trim();
+                            restored = true;
+                        } else if (match3) {
+                            selectedSubject = match3[1].replace(/Subject:\s*/i, '').trim();
+                            selectedCourse = match3[2].replace(/Course:\s*/i, '').trim();
+                            selectedLang = match3[3].replace(/Language:\s*/i, '').trim();
+                            selectedMode = "Notes";
+                            restored = true;
+                        }
+                    }
+                }
+            }
+
+            if (restored && selectedSubject && selectedCourse && selectedLang) {
+                saveSessionSelection();
+                activateLockedChatMode();
+            } else {
+                updateLockState();
+            }
+
+            syncChatBoxBottom();
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        function getCurrentTime() {
+            return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+
+        function copyText(btn) {
+            const content = btn.closest('.message').querySelector('.msg-content').innerText;
+            navigator.clipboard.writeText(content);
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="#0D8ABC"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+            setTimeout(() => {
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
+            }, 2000);
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+        }
+
+        function showFileName() {
+            const file = document.getElementById('file_input').files[0];
+            const previewContainer = document.getElementById('image-preview-container');
+            const previewImg = document.getElementById('image-preview');
+            
+            if(file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                    syncChatBoxBottom();
+                }
+                reader.readAsDataURL(file);
+            } else {
+                previewContainer.style.display = 'none';
+                syncChatBoxBottom();
+            }
+        }
+        function clearImagePreview() {
+            document.getElementById('file_input').value = '';
+            document.getElementById('image-preview-container').style.display = 'none';
+            syncChatBoxBottom();
+        }
+
+        function openModal(imgSrc) {
+            document.getElementById('modal-img').src = imgSrc;
+            document.getElementById('image-modal').style.display = 'flex';
+        }
+
+        function appendUserMessage(text, imgFile, msgId) {
+            const timeNow = getCurrentTime();
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'message-row user-row';
+            rowDiv.id = `row-${msgId}`;
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message user-msg';
+            
+            let contentHTML = `<div class="msg-content" id="msg-${msgId}">`;
+            if (imgFile) {
+                const imgURL = URL.createObjectURL(imgFile);
+                contentHTML += `<img src="${imgURL}" class="chat-image" onclick="openModal(this.src)"><br>`;
+            }
+            contentHTML += `<span class="text-content">${text}</span></div>`;
+            
+            contentHTML += `
+            <div class="msg-footer" style="justify-content: flex-end;">
+                <span class="msg-time">${timeNow}</span>
+                <button class="action-icon" id="edit-btn-${msgId}" onclick="startEdit('${msgId}')" title="Edit Message">
+                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </button>
+            </div>`;
+            
+            msgDiv.innerHTML = contentHTML;
+            rowDiv.appendChild(msgDiv);
+            chatBox.appendChild(rowDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function showTypingIndicator(msgId) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'message-row bot-row';
+            rowDiv.id = `bot-row-${msgId}`;
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'bot-header-line';
+            headerDiv.innerHTML = '<img src="/static/bot.png" alt="AI"> AI Notes';
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message bot-msg';
+            
+            msgDiv.innerHTML = `
+            <div class="msg-content" style="color:#666; font-style:italic;">
+                <div class="typing-spinner" style="margin-right: 8px;"></div> AI is analyzing...
+            </div>
+            <div class="msg-footer" id="footer-${msgId}" style="display:none;">
+                <span class="msg-time">${getCurrentTime()}</span>
+                <button class="action-icon" title="Good response"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
+                <button class="action-icon" title="Bad response"><svg viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L10.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
+                <button class="action-icon" title="Copy text" onclick="copyText(this)"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
+                <button class="action-icon" title="Regenerate"><svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+            </div>
+            <div class="ai-disclaimer" id="disc-${msgId}" style="display:none;">AI Notes is AI and can make mistakes.</div>`;
+
+            rowDiv.appendChild(headerDiv);
+            rowDiv.appendChild(msgDiv);
+            chatBox.appendChild(rowDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function startEdit(msgId) {
+            const textSpan = document.querySelector(`#msg-${msgId} .text-content`);
+            if(!textSpan) return;
+            const currentText = textSpan.innerText;
+            
+            const editHTML = `
+                <textarea id="edit-input-${msgId}" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;">${currentText}</textarea>
+                <div style="margin-top: 5px; text-align: right;">
+                    <button onclick="cancelEdit('${msgId}')" style="padding: 5px 10px; cursor: pointer; border: none; background: #eee; border-radius: 5px; margin-right: 5px;">Cancel</button>
+                    <button onclick="submitEdit('${msgId}')" style="padding: 5px 10px; cursor: pointer; border: none; background: #0D8ABC; color: white; border-radius: 5px;">Save</button>
+                </div>
+            `;
+            textSpan.style.display = 'none';
+            
+            const editContainer = document.createElement('div');
+            editContainer.id = `edit-container-${msgId}`;
+            editContainer.innerHTML = editHTML;
+            document.getElementById(`msg-${msgId}`).appendChild(editContainer);
+        }
+
+        function cancelEdit(msgId) {
+            document.getElementById(`edit-container-${msgId}`).remove();
+            document.querySelector(`#msg-${msgId} .text-content`).style.display = 'inline';
+        }
+
+        async function submitEdit(msgId) {
+            const newText = document.getElementById(`edit-input-${msgId}`).value.trim();
+            if(!newText) return;
+
+            document.getElementById(`edit-container-${msgId}`).remove();
+            const textSpan = document.querySelector(`#msg-${msgId} .text-content`);
+            textSpan.innerText = newText;
+            textSpan.style.display = 'inline';
+            
+            const botMsgContent = document.querySelector(`#bot-row-${msgId} .msg-content`);
+            botMsgContent.innerHTML = '<div class="typing-spinner" style="margin-right: 8px;"></div> AI is updating...';
+            botMsgContent.style.color = "#666";
+            botMsgContent.style.fontStyle = "italic";
+            
+            let fullPrompt = newText;
+            if (selectedSubject && selectedCourse && selectedLang && selectedMode && !newText.startsWith("[Subject:")) {
+                fullPrompt = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang} ➔ Mode: ${selectedMode}] ${newText}`;
+            }
+
+            const formData = new FormData();
+            formData.append('prompt', fullPrompt);
+            formData.append('session_id', currentSessionId);
+            formData.append('msg_id', msgId);
+
+            try {
+                const response = await fetch('/edit_chat', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.remaining_tokens !== undefined) updateHeaderTokens(data.remaining_tokens);
+                
+                if(data.error) {
+                    botMsgContent.innerHTML = data.error;
+                    botMsgContent.style.color = "#dc2626";
+                    botMsgContent.style.fontWeight = "600";
+                    botMsgContent.style.fontStyle = "normal";
+                } else {
+                    botMsgContent.innerHTML = formatBotResponse(data.response);
+                    botMsgContent.style.color = "inherit";
+                    botMsgContent.style.fontStyle = "normal";
+                }
+            } catch (err) {
+                botMsgContent.innerHTML = "System Error.";
+                botMsgContent.style.color = "red";
+            }
+        }
+
+        async function sendMessage() {
+            if (!selectedSubject || !selectedCourse || !selectedLang || !selectedMode) {
+                alert("Please select Subject ➔ Honours/General ➔ Language ➔ Notes/Q&A/Doubt before sending a message!");
+                return;
+            }
+
+            const promptInput = document.getElementById('prompt');
+            const fileInput = document.getElementById('file_input');
+            const sendBtn = document.getElementById('send-btn');
+            
+            const prompt = promptInput.value.trim();
+            const file = fileInput.files[0];
+            if (!prompt && !file) return;
+
+            const displayPrompt = `[${selectedSubject} ➔ ${selectedCourse} ➔ ${selectedLang} ➔ ${selectedMode}] ${prompt}`;
+            const fullPromptForAI = `[Subject: ${selectedSubject} ➔ Course: ${selectedCourse} ➔ Language: ${selectedLang} ➔ Mode: ${selectedMode}] ${prompt}`;
+
+            const tempId = "temp-" + Date.now();
+            appendUserMessage(displayPrompt, file, tempId);
+            
+            promptInput.value = '';
+            clearImagePreview();
+
+            sendBtn.innerHTML = '<div class="btn-spinner"></div>';
+            sendBtn.disabled = true;
+            
+            showTypingIndicator(tempId);
+
+            const formData = new FormData();
+            formData.append('prompt', fullPromptForAI);
+            formData.append('session_id', currentSessionId);
+            if (file) formData.append('file', file);
+
+            try {
+                const response = await fetch('/chat', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                sendBtn.innerHTML = '↑';
+                sendBtn.disabled = false;
+                if (data.remaining_tokens !== undefined) updateHeaderTokens(data.remaining_tokens);
+                
+                const botMsgContent = document.querySelector(`#bot-row-${tempId} .msg-content`);
+                const botMsgFooter = document.getElementById(`footer-${tempId}`);
+                const botMsgDisc = document.getElementById(`disc-${tempId}`);
+                
+                if(data.error) {
+                    botMsgContent.innerHTML = data.error;
+                    botMsgContent.style.color = "#dc2626";
+                    botMsgContent.style.fontWeight = "600";
+                    botMsgContent.style.fontStyle = "normal";
+                } else {
+                    document.getElementById(`row-${tempId}`).id = `row-${data.msg_id}`;
+                    document.getElementById(`msg-${tempId}`).id = `msg-${data.msg_id}`;
+                    const editBtn = document.getElementById(`edit-btn-${tempId}`);
+                    editBtn.id = `edit-btn-${data.msg_id}`;
+                    editBtn.setAttribute('onclick', `startEdit('${data.msg_id}')`);
+                    document.getElementById(`bot-row-${tempId}`).id = `bot-row-${data.msg_id}`;
+                    
+                    botMsgFooter.id = `footer-${data.msg_id}`;
+                    botMsgFooter.style.display = "flex";
+                    if (botMsgDisc) {
+                        botMsgDisc.id = `disc-${data.msg_id}`;
+                        botMsgDisc.style.display = "block";
+                    }
+                    
+                    botMsgContent.innerHTML = formatBotResponse(data.response);
+                    botMsgContent.style.color = "inherit";
+                    botMsgContent.style.fontStyle = "normal";
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    
+                    if (currentSessionId === "None" || !currentSessionId) {
+                        currentSessionId = data.session_id;
+                        saveSessionSelection();
+                        window.history.pushState(null, '', '/?session_id=' + data.session_id);
+                        setTimeout(() => location.reload(), 2500); 
+                    }
+                }
+            } catch (err) {
+                sendBtn.innerHTML = '↑';
+                sendBtn.disabled = false;
+                const botMsgContent = document.querySelector(`#bot-row-${tempId} .msg-content`);
+                botMsgContent.innerHTML = "System Error. Please try again.";
+                botMsgContent.style.color = "red";
+            }
+        }
+
+        document.getElementById('prompt').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
 </body>
-</html> 
+</html>
