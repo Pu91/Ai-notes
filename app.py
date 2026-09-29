@@ -18,8 +18,8 @@ from firebase_admin import credentials, firestore, auth as firebase_auth
 from main_prompt import get_system_instruction, OCR_PROMPT, get_image_notes_prompt
 
 app = Flask(__name__)
-app.secret_key = "super_secret_ai_notes_key_123" 
-app.permanent_session_lifetime = timedelta(days=30) 
+app.secret_key = "super_secret_ai_notes_key_123"
+app.permanent_session_lifetime = timedelta(days=30)
 
 # Firebase Setup
 if not firebase_admin._apps:
@@ -50,7 +50,7 @@ def clean_and_format_response(text):
     text = re.sub(r'(?m)^\s*-\s+', '• ', text)
     return text
 
-# টোকেন বাঁচানোর জন্য চেক করা: ইউজার কি আগের মেসেজের ওপর ডাউট বা পয়েন্ট জানতে চাইছে?
+# টোকেন বাঁচানোর জন্য চেক করা: ইউজার কি আগের মেসেজের ওপর ডাউট, পয়েন্ট বা পরের ধাপের প্রশ্ন (5 Marks / বাকি প্রশ্ন) চাইছে?
 def needs_previous_context(prompt_text, has_new_image=False):
     if has_new_image:
         return False
@@ -62,9 +62,10 @@ def needs_previous_context(prompt_text, has_new_image=False):
     clean_user_text = re.sub(r'\[.*?\]\s*', '', q).strip()
 
     followup_keywords = [
-        "নম্বর", "নাম্বার", "number", "no", "দাগ", "পয়েন্ট", "পয়েন্ট", "point", "pint", "টপিক", "topic",
-        "প্রশ্নটা", "উত্তরটা", "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar",
-        "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi", "বলো", "bolo",
+        "নম্বর", "নাম্বার", "নম্বরের", "number", "no", "দাগ", "পয়েন্ট", "পয়েন্ট", "point", "pint", "টপিক", "topic",
+        "টপিকের", "বাকি", "baki", "পরের", "porer", "marks", "মার্কস", "প্রশ্নটা", "উত্তরটা", "প্রশ্নগুলো", "উত্তরগুলো",
+        "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar", "এবার", "ebar",
+        "বুঝিয়ে", "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi", "বলো", "bolo",
         "ব্যাখ্যা", "explain", "detail", "short", "ডাউট", "doubt", "কেন", "কিভাবে",
         "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯", "১০",
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
@@ -72,12 +73,12 @@ def needs_previous_context(prompt_text, has_new_image=False):
     if any(word in clean_user_text for word in followup_keywords):
         return True
 
-    if len(clean_user_text.split()) <= 10:
+    if len(clean_user_text.split()) <= 12:
         return True
 
     return False
 
-# টোকেন বাঁচিয়ে আগের মেসেজের পয়েন্ট ও লাইন ব্রেক অক্ষুণ্ণ রেখে হিস্ট্রি আনার ফাংশন
+# টোকেন বাঁচিয়ে শুরুর মূল টপিক/ছবির লেখা এবং শেষের ২টি মেসেজ অক্ষুণ্ণ রেখে হিস্ট্রি আনার ফাংশন
 def get_smart_chat_history(user_email, session_id, exclude_msg_id=None):
     history_messages = []
     if not session_id or session_id == "None":
@@ -90,23 +91,41 @@ def get_smart_chat_history(user_email, session_id, exclude_msg_id=None):
                 break
             raw_list.append(m.to_dict())
 
-        # শেষের ২টি মেসেজ (যাতে মূল নোটস এবং জাস্ট আগের মেসেজ দুটোই থাকে)
-        for item in raw_list[-2:]:
+        if not raw_list:
+            return history_messages
+
+        # চ্যাটের শুরুতে বা আগে কোনো ছবি/সিলেবাস দেওয়া থাকলে সেটির টপিক মনে রাখা (যাতে ৩ নম্বর ধাপে গিয়েও মূল টপিক না ভোলে)
+        base_topic_context = ""
+        for item in raw_list:
+            if item.get('ocr_text'):
+                base_topic_context = f"[এই চ্যাটের মূল সিলেবাস/ছবির লেখা:\n{item.get('ocr_text')[:1200]}]\n"
+                break
+        if not base_topic_context and len(raw_list) > 2:
+            first_u_msg = re.sub(r'\[.*?\]\s*', '', raw_list[0].get('user_msg', '')).strip()
+            if first_u_msg:
+                base_topic_context = f"[এই চ্যাটের মূল আলোচ্য টপিক: {first_u_msg[:500]}]\n"
+
+        # শেষের ২টি মেসেজ নেওয়া হচ্ছে (যাতে ১–৫ নম্বর প্রশ্ন দেওয়ার পর ৬ নম্বর থেকে দেওয়ার সময় আগের প্রশ্নগুলো মনে থাকে)
+        recent_items = raw_list[-2:]
+        for idx, item in enumerate(recent_items):
             u_msg = re.sub(r'\[.*?\]\s*', '', item.get('user_msg', '')).strip()
             ocr_txt = item.get('ocr_text', '')
             a_msg = item.get('ai_msg', '')
 
             if ocr_txt:
                 u_msg = f"আগের ছবির প্রশ্ন/সিলেবাস:\n{ocr_txt[:1200]}\nইউজারের নির্দেশ: {u_msg}"
+            elif idx == 0 and base_topic_context:
+                u_msg = f"{base_topic_context}ইউজারের নির্দেশ: {u_msg}"
 
             if u_msg:
-                history_messages.append({"role": "user", "content": u_msg[:1200]})
+                history_messages.append({"role": "user", "content": u_msg[:1400]})
             if a_msg:
-                # লাইন ব্রেক (\n) ঠিক রাখা হচ্ছে যাতে ১, ২, ৩ নম্বর পয়েন্টগুলো এআই স্পষ্ট চিনতে পারে
-                clean_a_msg = re.sub(r'<br\s*/?>', '\n', a_msg)
+                # ক্লিক বাটনের কোড বাদ দিয়ে এবং লাইন ব্রেক (\n) ঠিক রেখে আগের উত্তরটি মেমোরিতে দেওয়া হচ্ছে
+                clean_a_msg = re.sub(r'<div onclick=.*?</div>', '', a_msg, flags=re.DOTALL)
+                clean_a_msg = re.sub(r'<br\s*/?>', '\n', clean_a_msg)
                 clean_a_msg = re.sub(r'<[^>]+>', '', clean_a_msg)
                 clean_a_msg = re.sub(r'\n{3,}', '\n\n', clean_a_msg).strip()
-                history_messages.append({"role": "assistant", "content": clean_a_msg[:3000]})
+                history_messages.append({"role": "assistant", "content": clean_a_msg[:3200]})
     except Exception:
         pass
     return history_messages
@@ -116,7 +135,7 @@ def get_ai_response(prompt, base64_image=None, chat_history=None):
     combined_context = prompt
     extracted_image_text = ""
 
-    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির লেখা পড়ে নেওয়া হবে
+    # ১. যদি মেসেজে নতুন ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির লেখা পড়ে নেওয়া হবে
     if base64_image:
         try:
             vision_response = client.chat.completions.create(
@@ -147,9 +166,16 @@ def get_ai_response(prompt, base64_image=None, chat_history=None):
     messages_payload = [{"role": "system", "content": system_instruction}]
     if chat_history:
         messages_payload.extend(chat_history)
-        final_prompt = f"""{final_prompt}
+        p_lower = prompt.lower()
+        # ইউজার কি ৫ নম্বরের প্রশ্ন বা বাকি থাকা পরের প্রশ্নগুলোর বাটনে ক্লিক করেছে?
+        if any(k in p_lower for k in ["5 marks", "৫ নম্বরের", "বাকি থাকা", "৬ নম্বর থেকে"]):
+            final_prompt = f"""{final_prompt}
 
-[জরুরি নির্দেশ: ইউজার ওপরে দেওয়া তোমার আগের উত্তরের (Previous Assistant Message) পরিপ্রেক্ষিতে এই প্রশ্নটি করেছে। ইউজার যদি '2 number point/pint', '২ নম্বর টপিক' বা কোনো নির্দিষ্ট নম্বর উল্লেখ করে, তবে তোমার আগের উত্তরের ভেতরে থাকা সেই ক্রমিক নম্বরের পয়েন্ট বা টপিকটিই (যেমন: ২ নম্বর পয়েন্ট বা ২ নম্বর বুলেট টপিক) বিস্তারিতভাবে বুঝিয়ে বলো। ভুলেও সেটিকে '২ নম্বরের প্রশ্ন (2-Mark Question)' ভাববে না!]"""
+[জরুরি নির্দেশ: ওপরে দেওয়া আগের মেসেজের মূল টপিক/সিলেবাস এবং আগের প্রশ্নোত্তরগুলো দেখো। ইউজার যদি ৫ নম্বরের প্রশ্ন চায় তবে প্রথমে ১ থেকে ৫ নম্বর পর্যন্ত বড় প্রশ্নোত্তর (প্রতিটি ৬-৭ লাইনের ওপরে) দাও এবং আরও বাকি থাকলে নিচে ক্লিক করার আন্ডারলাইন কোডটি দাও। আর যদি ইউজার 'বাকি থাকা পরের ৫ নম্বরের প্রশ্ন (৬ নম্বর থেকে)' চায়, তবে আগের ১-৫ নম্বর প্রশ্নগুলো রিপিট না করে ৬ নম্বর থেকে বাকি সব প্রশ্নোত্তর দাও এবং শেষে ১২ নম্বরের সমাপ্তি নোটটি লিখে দাও।]"""
+        else:
+            final_prompt = f"""{final_prompt}
+
+[জরুরি নির্দেশ: ইউজার ওপরে দেওয়া তোমার আগের উত্তরের (Previous Assistant Message) পরিপ্রেক্ষিতে এই প্রশ্নটি করেছে। ইউজার যদি '2 number point/pint', '২ নম্বর টপিক' বা কোনো নির্দিষ্ট ক্রমিক নম্বর উল্লেখ করে, তবে তোমার আগের উত্তরের ভেতরে থাকা সেই ক্রমিক নম্বরের পয়েন্ট বা টপিকটিই বিস্তারিতভাবে বুঝিয়ে বলো। ভুলেও সেটিকে '২ নম্বরের প্রশ্ন (2-Mark Question)' ভাববে না!]"""
 
     messages_payload.append({"role": "user", "content": final_prompt})
 
@@ -259,8 +285,8 @@ def forgot_password():
         session['reset_email'] = email
         session['otp'] = otp
         
-        sender_email = "Puspenduhaldar652@gmail.com"  
-        sender_password = "tuelxovrkmfeqolr"          
+        sender_email = "Puspenduhaldar652@gmail.com"
+        sender_password = "tuelxovrkmfeqolr"
 
         try:
             msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
@@ -406,19 +432,6 @@ def edit_chat():
                     potential_path = doc_data.get('img_url').lstrip('/')
                     if os.path.exists(potential_path):
                         base64_image = encode_image(potential_path)
-
-        if not base64_image and session_id and session_id != "None":
-            recent_msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5).stream()
-            for m in recent_msgs:
-                m_data = m.to_dict()
-                if m_data.get('img_b64'):
-                    base64_image = m_data.get('img_b64')
-                    break
-                elif m_data.get('img_url'):
-                    potential_path = m_data.get('img_url').lstrip('/')
-                    if os.path.exists(potential_path):
-                        base64_image = encode_image(potential_path)
-                        break
 
         chat_history = []
         if needs_previous_context(prompt, has_new_image=(base64_image is not None)):
