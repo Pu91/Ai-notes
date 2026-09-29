@@ -182,7 +182,7 @@
             box-shadow: 0 4px 14px rgba(229, 46, 113, 0.35);
         }
 
-        /* === UPI QR SCANNER & TIMER MODAL === */
+        /* === DIRECT APP PAY MODAL === */
         #payment-modal {
             display: none;
             position: fixed;
@@ -241,16 +241,65 @@
             font-weight: 700;
             padding: 6px 14px;
             border-radius: 20px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        /* Direct UPI App Buttons (Excluding PhonePe) */
+        .app-btn-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            margin-bottom: 12px;
+        }
+        .upi-app-direct-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 11px;
+            font-size: 14.5px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .upi-app-direct-btn:active { transform: scale(0.98); }
+
+        .gpay-btn {
+            background: #1a73e8;
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 3px 10px rgba(26, 115, 232, 0.3);
+        }
+        .paytm-btn {
+            background: #00baf2;
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 3px 10px rgba(0, 186, 242, 0.3);
+        }
+        .bhim-btn {
+            background: #f1f5f9;
+            color: #0f172a;
+            border: 1.5px solid #cbd5e1;
+        }
+
+        .divider-line {
+            font-size: 11.5px;
+            color: #94a3b8;
+            font-weight: 700;
+            margin: 6px 0 8px 0;
+            text-transform: uppercase;
         }
 
         .qr-frame {
-            width: 185px;
-            height: 185px;
-            margin: 0 auto 8px auto;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 10px auto;
             padding: 8px;
             border: 2px dashed #0D8ABC;
-            border-radius: 16px;
+            border-radius: 14px;
             background: #ffffff;
             display: flex;
             align-items: center;
@@ -262,49 +311,12 @@
             object-fit: contain;
         }
 
-        .step-hint {
-            font-size: 12.5px;
-            color: #0f172a;
-            background: #fef9c3;
-            border: 1px solid #fde047;
-            padding: 7px 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        /* Copy UPI ID & Mobile Number Boxes */
-        .copy-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #eff6ff;
-            border: 1px solid #93c5fd;
-            padding: 7px 10px;
-            border-radius: 9px;
-            margin-bottom: 8px;
-            font-size: 13px;
-            font-weight: 700;
-            color: #1e3a8a;
-        }
-        .copy-btn-sm {
-            background: #2563eb;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 5px 10px;
-            font-size: 11.5px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
         .utr-box {
             text-align: left;
             background: #f8fafc;
             padding: 10px 12px;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
-            margin-top: 10px;
             margin-bottom: 14px;
         }
         .utr-box label {
@@ -403,12 +415,12 @@
         </div>
     </div>
 
-    <!-- === UPI QR SCANNER & COUNTDOWN TIMER MODAL === -->
+    <!-- === DIRECT PAY (GOOGLE PAY / PAYTM / BHIM) & QR MODAL === -->
     <div id="payment-modal">
         <div class="gateway-card">
             <div class="gateway-header">
                 <div style="text-align: left;">
-                    <div class="gateway-title">Pay ₹49 to PUSPENDU HALDAR</div>
+                    <div class="gateway-title">AI Notes Plus Checkout</div>
                     <div class="gateway-sub">👤 {{ session.get('user', 'User') }}</div>
                 </div>
                 <div class="gateway-amount">₹49</div>
@@ -417,33 +429,32 @@
             <div class="gateway-body">
                 <!-- 5-Minute Countdown Timer -->
                 <div class="timer-bar">
-                    ⏳ Time remaining: <span id="payment-timer">05:00</span>
+                    ⏳ Complete payment in: <span id="payment-timer">05:00</span>
                 </div>
 
-                <!-- Standard Clean UPI QR Scanner (No forced amount parameter so PhonePe never blocks) -->
+                <!-- DIRECT PAY BUTTONS FOR OTHER APPS (GPay, Paytm, BHIM/Others) -->
+                <div class="app-btn-grid">
+                    <a id="gpay-link" href="#" class="upi-app-direct-btn gpay-btn">
+                        💳 Pay ₹49 via Google Pay (GPay)
+                    </a>
+                    <a id="paytm-link" href="#" class="upi-app-direct-btn paytm-btn">
+                        📲 Pay ₹49 via Paytm UPI
+                    </a>
+                    <a id="other-upi-link" href="#" class="upi-app-direct-btn bhim-btn">
+                        ⚡ Pay via BHIM / Amazon Pay / Other UPI
+                    </a>
+                </div>
+
+                <div class="divider-line">— OR SCAN QR WITH ANY APP —</div>
+
+                <!-- QR Scanner -->
                 <div class="qr-frame">
                     <img id="upi-qr-img" src="" alt="Scan UPI QR">
                 </div>
 
-                <div class="step-hint">
-                    Scan QR or Copy UPI ID / Number below, open <b>PhonePe / GPay / Paytm</b> and send <b>₹49</b>
-                </div>
-
-                <!-- Copy UPI ID Row -->
-                <div class="copy-row">
-                    <span>UPI ID: 9134873789-2@ibl</span>
-                    <button type="button" class="copy-btn-sm" onclick="copyTextValue('9134873789-2@ibl', this)">📋 Copy UPI</button>
-                </div>
-
-                <!-- Copy Mobile Number Row -->
-                <div class="copy-row">
-                    <span>UPI Number: 9134873789</span>
-                    <button type="button" class="copy-btn-sm" onclick="copyTextValue('9134873789', this)">📋 Copy No.</button>
-                </div>
-
                 <!-- 12-Digit UTR Input for Verification -->
                 <div class="utr-box">
-                    <label for="utr-number">Enter 12-Digit UTR / Transaction ID after paying ₹49:</label>
+                    <label for="utr-number">Enter 12-Digit UTR / UPI Ref No. after payment:</label>
                     <input type="text" id="utr-number" class="utr-input" maxlength="12" placeholder="e.g. 426518902341" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 </div>
 
@@ -451,7 +462,7 @@
 
                 <div class="gateway-actions">
                     <button type="button" class="cancel-pay-btn" onclick="closePaymentModal()">Cancel</button>
-                    <button type="button" class="verify-pay-btn" id="verify-btn" onclick="submitUtrPayment()">✓ Verify Payment</button>
+                    <button type="button" class="verify-pay-btn" id="verify-btn" onclick="submitUtrPayment()">✓ Verify & Activate</button>
                 </div>
             </div>
         </div>
@@ -460,30 +471,30 @@
     <script>
         const MY_UPI_ID = "9134873789-2@ibl"; 
         const MERCHANT_NAME = "PUSPENDU HALDAR";
+        const PLAN_AMOUNT = "49";
 
         let countdownInterval = null;
         let timeLeftSeconds = 300; // 5 minutes
 
-        function setupUpiQr() {
-            // Standard static UPI QR format (without am=49 or tn= message, so PhonePe security never declines it!)
-            const cleanUpiUri = `upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MERCHANT_NAME)}&cu=INR`;
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(cleanUpiUri)}`;
-            document.getElementById('upi-qr-img').src = qrUrl;
-        }
+        function setupDirectAppLinks() {
+            const params = `pa=${MY_UPI_ID}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${PLAN_AMOUNT}&cu=INR`;
 
-        function copyTextValue(val, btn) {
-            navigator.clipboard.writeText(val);
-            const oldText = btn.innerText;
-            btn.innerText = "✓ Copied!";
-            btn.style.background = "#16a34a";
-            setTimeout(() => {
-                btn.innerText = oldText;
-                btn.style.background = "#2563eb";
-            }, 2000);
+            // 1. Direct Google Pay (GPay) Intent Link
+            document.getElementById('gpay-link').href = `tez://upi/pay?${params}`;
+
+            // 2. Direct Paytm UPI Intent Link
+            document.getElementById('paytm-link').href = `paytmmp://pay?${params}`;
+
+            // 3. BHIM / Amazon Pay / Other UPI App Chooser Link
+            document.getElementById('other-upi-link').href = `upi://pay?${params}`;
+
+            // 4. Clean QR Code for scanning
+            const qrData = `upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${PLAN_AMOUNT}&cu=INR`;
+            document.getElementById('upi-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData)}`;
         }
 
         function openPaymentModal() {
-            setupUpiQr();
+            setupDirectAppLinks();
             document.getElementById('utr-number').value = '';
             document.getElementById('pay-status-msg').style.display = 'none';
             document.getElementById('verify-btn').disabled = false;
@@ -508,11 +519,7 @@
 
                 if (timeLeftSeconds <= 0) {
                     clearInterval(countdownInterval);
-                    const statusEl = document.getElementById('pay-status-msg');
-                    statusEl.style.display = 'block';
-                    statusEl.style.color = '#dc2626';
-                    statusEl.innerText = '⏰ Payment session expired! Please reopen and try again.';
-                    setTimeout(() => closePaymentModal(), 2500);
+                    closePaymentModal();
                 }
             }, 1000);
         }
