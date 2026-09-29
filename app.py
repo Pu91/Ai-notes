@@ -11,439 +11,576 @@ import base64
 from PIL import Image
 import PyPDF2
 from email.mime.text import MIMEText
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import firebase_admin
 from firebase_admin import credentials, firestore, auth as firebase_auth
 
 from main_prompt import get_system_instruction, OCR_PROMPT, get_image_notes_prompt
 
 app = Flask(__name__)
-app.secret_key = "super_secret_ai_notes_key_123" 
-app.permanent_session_lifetime = timedelta(days=30) 
+app.secret_key = "super_secret_ai_notes_key_123" 
+app.permanent_session_lifetime = timedelta(days=30) 
 
 # Firebase Setup
 if not firebase_admin._apps:
-    cred = credentials.Certificate('firebase_key.json')
-    firebase_admin.initialize_app(cred)
+    cred = credentials.Certificate('firebase_key.json')
+    firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # Groq Setup
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
+# --- DAILY 2000 TOKEN SYSTEM (Stored in Firestore so no user can restart/bypass) ---
+DAILY_TOKEN_LIMIT = 2000
+
+def get_today_date_str():
+    # Indian Standard Time (UTC + 5:30)
+    ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+    return ist_now.strftime('%Y-%m-%d')
+
+def get_user_daily_tokens(user_email):
+    today_str = get_today_date_str()
+    user_ref = db.collection('users').document(user_email)
+    doc = user_ref.get()
+    if doc.exists:
+        data = doc.to_dict()
+        if data.get('token_date') == today_str and 'daily_tokens' in data:
+            return max(0, int(data.get('daily_tokens', 0)))
+        else:
+            user_ref.update({'daily_tokens': DAILY_TOKEN_LIMIT, 'token_date': today_str})
+            return DAILY_TOKEN_LIMIT
+    else:
+        user_ref.set({'email': user_email, 'daily_tokens': DAILY_TOKEN_LIMIT, 'token_date': today_str}, merge=True)
+        return DAILY_TOKEN_LIMIT
+
+def deduct_user_tokens(user_email, used_tokens):
+    current = get_user_daily_tokens(user_email)
+    # Deduct actual token count (minimum 50 tokens per response)
+    cost = max(50, min(450, int(used_tokens)))
+    remaining = max(0, current - cost)
+    db.collection('users').document(user_email).update({
+        'daily_tokens': remaining,
+        'token_date': get_today_date_str()
+    })
+    return remaining
+
+# Format chat title nicely from selected options: Subject • Course • Lang | Prompt
+def build_formatted_session_title(raw_prompt):
+    match4 = re.search(r'\[Subject:\s*(.*?)\s*➔\s*Course:\s*(.*?)\s*➔\s*Language:\s*(.*?)\s*➔\s*Mode:\s*(.*?)\]\s*(.*)', raw_prompt, re.IGNORECASE | re.DOTALL)
+    if match4:
+        sub = match4.group(1).strip()
+        crs = match4.group(2).strip()
+        lng = match4.group(3).strip()
+        mode = match4.group(4).strip()
+        user_txt = match4.group(5).strip()
+        topic_part = user_txt if user_txt else mode
+        return f"{sub} • {crs} • {lng} ({mode}) — {topic_part[:60]}"
+    
+    clean_title = re.sub(r'\[.*?\]\s*', '', raw_prompt).strip()
+    return clean_title[:60] if clean_title else "Study Notes"
+
 def encode_image(image_path):
-    with Image.open(image_path) as img:
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        img.thumbnail((1400, 1400))
-        buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", quality=88)
-        return base64.b64encode(buffer.getvalue()).decode('utf-8')
+    with Image.open(image_path) as img:
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        img.thumbnail((1400, 1400))
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=88)
+        return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 def clean_and_format_response(text):
-    if not text or "<img" in text:
-        return text
-    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-    text = re.sub(r'(?m)^#{1,6}\s*(.*?)$', r'<b>\1</b>', text)
-    text = re.sub(r'</?u>', '', text)
-    text = re.sub(r'(?m)^\s*\*\s+', '• ', text)
-    text = re.sub(r'(?m)^\s*-\s+', '• ', text)
-    return text
+    if not text or "<img" in text:
+        return text
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'(?m)^#{1,6}\s*(.*?)$', r'<b>\1</b>', text)
+    text = re.sub(r'</?u>', '', text)
+    text = re.sub(r'(?m)^\s*\*\s+', '• ', text)
+    text = re.sub(r'(?m)^\s*-\s+', '• ', text)
+    return text
 
 # টোকেন বাঁচানোর জন্য চেক করা: ইউজার কি আগের মেসেজের ওপর ডাউট বা পয়েন্ট জানতে চাইছে?
 def needs_previous_context(prompt_text, has_new_image=False):
-    if has_new_image:
-        return False
-    
-    q = prompt_text.lower()
-    if "mode: doubt solve" in q:
-        return True
+    if has_new_image:
+        return False
+    
+    q = prompt_text.lower()
+    if "mode: doubt solve" in q:
+        return True
 
-    clean_user_text = re.sub(r'\[.*?\]\s*', '', q).strip()
+    clean_user_text = re.sub(r'\[.*?\]\s*', '', q).strip()
 
-    followup_keywords = [
-        "নম্বর", "নাম্বার", "number", "no", "দাগ", "পয়েন্ট", "পয়েন্ট", "point", "pint", "টপিক", "topic",
-        "প্রশ্নটা", "উত্তরটা", "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar",
-        "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi", "বলো", "bolo",
-        "ব্যাখ্যা", "explain", "detail", "short", "ডাউট", "doubt", "কেন", "কিভাবে",
-        "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯", "১০",
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
-    ]
-    if any(word in clean_user_text for word in followup_keywords):
-        return True
+    followup_keywords = [
+        "নম্বর", "নাম্বার", "number", "no", "দাগ", "পয়েন্ট", "পয়েন্ট", "point", "pint", "টপিক", "topic",
+        "প্রশ্নটা", "উত্তরটা", "বড়", "বড়", "boro", "ছোট", "choto", "আগের", "ager", "আবার", "abar",
+        "বুঝিয়ে", "বোঝাও", "bujhiye", "এটা", "ওটা", "ata", "ota", "এই", "oi", "বলো", "bolo",
+        "ব্যাখ্যা", "explain", "detail", "short", "ডাউট", "doubt", "কেন", "কিভাবে", "বাকি", "পরের",
+        "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯", "১০",
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+    ]
+    if any(word in clean_user_text for word in followup_keywords):
+        return True
 
-    if len(clean_user_text.split()) <= 10:
-        return True
+    if len(clean_user_text.split()) <= 10:
+        return True
 
-    return False
+    return False
 
 # টোকেন বাঁচিয়ে আগের মেসেজের পয়েন্ট ও লাইন ব্রেক অক্ষুণ্ণ রেখে হিস্ট্রি আনার ফাংশন
 def get_smart_chat_history(user_email, session_id, exclude_msg_id=None):
-    history_messages = []
-    if not session_id or session_id == "None":
-        return history_messages
-    try:
-        msgs_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
-        raw_list = []
-        for m in msgs_ref:
-            if exclude_msg_id and m.id == exclude_msg_id:
-                break
-            raw_list.append(m.to_dict())
+    history_messages = []
+    if not session_id or session_id == "None":
+        return history_messages
+    try:
+        msgs_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
+        raw_list = []
+        for m in msgs_ref:
+            if exclude_msg_id and m.id == exclude_msg_id:
+                break
+            raw_list.append(m.to_dict())
 
-        # শেষের ২টি মেসেজ (যাতে মূল নোটস এবং জাস্ট আগের মেসেজ দুটোই থাকে)
-        for item in raw_list[-2:]:
-            u_msg = re.sub(r'\[.*?\]\s*', '', item.get('user_msg', '')).strip()
-            ocr_txt = item.get('ocr_text', '')
-            a_msg = item.get('ai_msg', '')
+        # শেষের ২টি মেসেজ (যাতে মূল নোটস এবং জাস্ট আগের মেসেজ দুটোই থাকে)
+        for item in raw_list[-2:]:
+            u_msg = re.sub(r'\[.*?\]\s*', '', item.get('user_msg', '')).strip()
+            ocr_txt = item.get('ocr_text', '')
+            a_msg = item.get('ai_msg', '')
 
-            if ocr_txt:
-                u_msg = f"আগের ছবির প্রশ্ন/সিলেবাস:\n{ocr_txt[:1200]}\nইউজারের নির্দেশ: {u_msg}"
+            if ocr_txt:
+                u_msg = f"আগের ছবির প্রশ্ন/সিলেবাস:\n{ocr_txt[:1200]}\nইউজারের নির্দেশ: {u_msg}"
 
-            if u_msg:
-                history_messages.append({"role": "user", "content": u_msg[:1200]})
-            if a_msg:
-                # লাইন ব্রেক (\n) ঠিক রাখা হচ্ছে যাতে ১, ২, ৩ নম্বর পয়েন্টগুলো এআই স্পষ্ট চিনতে পারে
-                clean_a_msg = re.sub(r'<br\s*/?>', '\n', a_msg)
-                clean_a_msg = re.sub(r'<[^>]+>', '', clean_a_msg)
-                clean_a_msg = re.sub(r'\n{3,}', '\n\n', clean_a_msg).strip()
-                history_messages.append({"role": "assistant", "content": clean_a_msg[:3000]})
-    except Exception:
-        pass
-    return history_messages
+            if u_msg:
+                history_messages.append({"role": "user", "content": u_msg[:1200]})
+            if a_msg:
+                clean_a_msg = re.sub(r'<br\s*/?>', '\n', a_msg)
+                clean_a_msg = re.sub(r'<[^>]+>', '', clean_a_msg)
+                clean_a_msg = re.sub(r'\n{3,}', '\n\n', clean_a_msg).strip()
+                history_messages.append({"role": "assistant", "content": clean_a_msg[:3000]})
+    except Exception:
+        pass
+    return history_messages
 
 def get_ai_response(prompt, base64_image=None, chat_history=None):
-    final_prompt = prompt
-    combined_context = prompt
-    extracted_image_text = ""
+    final_prompt = prompt
+    combined_context = prompt
+    extracted_image_text = ""
 
-    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির লেখা পড়ে নেওয়া হবে
-    if base64_image:
-        try:
-            vision_response = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": OCR_PROMPT},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
-                            }
-                        ]
-                    }
-                ],
-                temperature=0.2,
-                max_tokens=750
-            )
-            extracted_image_text = vision_response.choices[0].message.content
-            final_prompt = get_image_notes_prompt(extracted_image_text, prompt)
-            combined_context = f"{extracted_image_text} {prompt}"
-        except Exception as e:
-            raise Exception(f"Vision Model Error: {str(e)}")
+    # ১. যদি মেসেজে ছবি থাকে -> Qwen 3.8 Vision দিয়ে ছবির লেখা পড়ে নেওয়া হবে
+    if base64_image:
+        try:
+            vision_response = client.chat.completions.create(
+                model="qwen/qwen3.8-27b",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": OCR_PROMPT},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                            }
+                        ]
+                    }
+                ],
+                temperature=0.2,
+                max_tokens=750
+            )
+            extracted_image_text = vision_response.choices[0].message.content
+            final_prompt = get_image_notes_prompt(extracted_image_text, prompt)
+            combined_context = f"{extracted_image_text} {prompt}"
+        except Exception as e:
+            raise Exception(f"Vision Model Error: {str(e)}")
 
-    system_instruction = get_system_instruction(combined_context)
+    system_instruction = get_system_instruction(combined_context)
 
-    messages_payload = [{"role": "system", "content": system_instruction}]
-    if chat_history:
-        messages_payload.extend(chat_history)
-        final_prompt = f"""{final_prompt}
+    messages_payload = [{"role": "system", "content": system_instruction}]
+    if chat_history:
+        messages_payload.extend(chat_history)
+        final_prompt = f"""{final_prompt}
 
 [জরুরি নির্দেশ: ইউজার ওপরে দেওয়া তোমার আগের উত্তরের (Previous Assistant Message) পরিপ্রেক্ষিতে এই প্রশ্নটি করেছে। ইউজার যদি '2 number point/pint', '২ নম্বর টপিক' বা কোনো নির্দিষ্ট নম্বর উল্লেখ করে, তবে তোমার আগের উত্তরের ভেতরে থাকা সেই ক্রমিক নম্বরের পয়েন্ট বা টপিকটিই (যেমন: ২ নম্বর পয়েন্ট বা ২ নম্বর বুলেট টপিক) বিস্তারিতভাবে বুঝিয়ে বলো। ভুলেও সেটিকে '২ নম্বরের প্রশ্ন (2-Mark Question)' ভাববে না!]"""
 
-    messages_payload.append({"role": "user", "content": final_prompt})
+    messages_payload.append({"role": "user", "content": final_prompt})
 
-    # ২. মূল উত্তর তৈরি করবে OpenAI GPT-OSS-120B মডেল
-    text_models = [
-        "openai/gpt-oss-120b",
-        "openai/gpt-oss-20b",
-        "qwen/qwen3.8-27b"
-    ]
-    
-    last_error = None
-    for model_name in text_models:
-        try:
-            kwargs = {
-                "model": model_name,
-                "messages": messages_payload,
-                "temperature": 0.3
-            }
-            if "qwen" in model_name:
-                kwargs["max_tokens"] = 750
+    # ২. মূল উত্তর তৈরি করবে OpenAI GPT-OSS-120B মডেল
+    text_models = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b"
+    ]
+    
+    last_error = None
+    for model_name in text_models:
+        try:
+            kwargs = {
+                "model": model_name,
+                "messages": messages_payload,
+                "temperature": 0.3
+            }
+            if "qwen" in model_name:
+                kwargs["max_tokens"] = 750
 
-            response = client.chat.completions.create(**kwargs)
-            raw_reply = response.choices[0].message.content
-            return clean_and_format_response(raw_reply), extracted_image_text
-        except Exception as e:
-            last_error = e
-            continue
-            
-    raise last_error
+            response = client.chat.completions.create(**kwargs)
+            raw_reply = response.choices[0].message.content
+            
+            # Calculate tokens used
+            used_tokens = 200
+            if hasattr(response, 'usage') and response.usage and hasattr(response.usage, 'completion_tokens'):
+                used_tokens = response.usage.completion_tokens
+            else:
+                used_tokens = max(80, len(raw_reply) // 4)
+
+            return clean_and_format_response(raw_reply), extracted_image_text, used_tokens
+        except Exception as e:
+            last_error = e
+            continue
+            
+    raise last_error
 
 # --- লগইন ও রেজিস্ট্রেশন ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        user_ref = db.collection('users').document(email)
-        
-        if user_ref.get().exists:
-            flash("এই ইমেইলটি আগে থেকেই রেজিস্টার করা আছে!", "error")
-            return redirect(url_for('register'))
-        
-        hashed_pw = generate_password_hash(password)
-        user_ref.set({'email': email, 'password': hashed_pw, 'auth_provider': 'email'})
-        session.permanent = True
-        session['user'] = email
-        return redirect(url_for('home'))
-    return render_template('register.html')
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user_ref = db.collection('users').document(email)
+        
+        if user_ref.get().exists:
+            flash("এই ইমেইলটি আগে থেকেই রেজিস্টার করা আছে!", "error")
+            return redirect(url_for('register'))
+        
+        hashed_pw = generate_password_hash(password)
+        user_ref.set({
+            'email': email,
+            'password': hashed_pw,
+            'auth_provider': 'email',
+            'daily_tokens': DAILY_TOKEN_LIMIT,
+            'token_date': get_today_date_str()
+        })
+        session.permanent = True
+        session['user'] = email
+        return redirect(url_for('home'))
+    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        user_ref = db.collection('users').document(email).get()
-        
-        if user_ref.exists:
-            user_data = user_ref.to_dict()
-            if user_data.get('auth_provider') == 'google':
-                flash("এই অ্যাকাউন্টটি গুগল দিয়ে খোলা হয়েছে। দয়া করে 'Continue with Google' এ ক্লিক করুন।", "error")
-            elif check_password_hash(user_data['password'], password):
-                session.permanent = True
-                session['user'] = email
-                return redirect(url_for('home'))
-            else:
-                flash("পাসওয়ার্ড ভুল হয়েছে!", "error")
-        else:
-            flash("এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট নেই!", "error")
-            return redirect(url_for('login'))
-    return render_template('login.html')
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user_ref = db.collection('users').document(email).get()
+        
+        if user_ref.exists:
+            user_data = user_ref.to_dict()
+            if user_data.get('auth_provider') == 'google':
+                flash("এই অ্যাকাউন্টটি গুগল দিয়ে খোলা হয়েছে। দয়া করে 'Continue with Google' এ ক্লিক করুন।", "error")
+            elif check_password_hash(user_data['password'], password):
+                session.permanent = True
+                session['user'] = email
+                return redirect(url_for('home'))
+            else:
+                flash("পাসওয়ার্ড ভুল হয়েছে!", "error")
+        else:
+            flash("এই ইমেইল দিয়ে কোনো অ্যাকাউন্ট নেই!", "error")
+            return redirect(url_for('login'))
+    return render_template('login.html')
 
 @app.route('/google-login', methods=['POST'])
 def google_login():
-    token = request.json.get('token')
-    try:
-        decoded_token = firebase_auth.verify_id_token(token)
-        email = decoded_token.get('email')
-        user_ref = db.collection('users').document(email)
-        if not user_ref.get().exists:
-            user_ref.set({'email': email, 'auth_provider': 'google'})
-        session.permanent = True
-        session['user'] = email
-        return jsonify({"status": "success"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 401
+    token = request.json.get('token')
+    try:
+        decoded_token = firebase_auth.verify_id_token(token)
+        email = decoded_token.get('email')
+        user_ref = db.collection('users').document(email)
+        if not user_ref.get().exists:
+            user_ref.set({
+                'email': email,
+                'auth_provider': 'google',
+                'daily_tokens': DAILY_TOKEN_LIMIT,
+                'token_date': get_today_date_str()
+            })
+        session.permanent = True
+        session['user'] = email
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 401
 
 @app.route('/logout')
 def logout():
-    session.pop('user', None)
-    return redirect(url_for('login'))
+    session.pop('user', None)
+    return redirect(url_for('login'))
 
 # --- Forgot Password (OTP Flow) ---
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        if not email:
-            flash("দয়া করে ইমেইল দিন!", "error")
-            return redirect(url_for('forgot_password'))
-            
-        user_ref = db.collection('users').document(email).get()
-        if not user_ref.exists:
-            flash("এই ইমেইলটি আমাদের সিস্টেমে নেই!", "error")
-            return redirect(url_for('forgot_password'))
-            
-        otp = str(random.randint(1000, 9999))
-        session['reset_email'] = email
-        session['otp'] = otp
-        
-        sender_email = "Puspenduhaldar652@gmail.com"  
-        sender_password = "tuelxovrkmfeqolr"          
+    if request.method == 'POST':
+        email = request.form.get('email')
+        if not email:
+            flash("দয়া করে ইমেইল দিন!", "error")
+            return redirect(url_for('forgot_password'))
+            
+        user_ref = db.collection('users').document(email).get()
+        if not user_ref.exists:
+            flash("এই ইমেইলটি আমাদের সিস্টেমে নেই!", "error")
+            return redirect(url_for('forgot_password'))
+            
+        otp = str(random.randint(1000, 9999))
+        session['reset_email'] = email
+        session['otp'] = otp
+        
+        sender_email = "Puspenduhaldar652@gmail.com"  
+        sender_password = "tuelxovrkmfeqolr"          
 
-        try:
-            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
-            msg['Subject'] = 'AI Notes - Password Reset'
-            msg['From'] = f"AI Notes <{sender_email}>"
-            msg['To'] = email
+        try:
+            msg = MIMEText(f"আপনার পাসওয়ার্ড রিসেট করার OTP কোড হলো: {otp}", 'plain', 'utf-8')
+            msg['Subject'] = 'AI Notes - Password Reset'
+            msg['From'] = f"AI Notes <{sender_email}>"
+            msg['To'] = email
 
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(sender_email, sender_password)
-                server.sendmail(sender_email, [email], msg.as_string())
-            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
-            return redirect(url_for('verify_otp'))
-        except Exception as e:
-            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
-            return redirect(url_for('forgot_password'))
-    return render_template('forgot.html')
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, [email], msg.as_string())
+            flash("আপনার ইমেইলে OTP পাঠানো হয়েছে! ইনবক্স চেক করুন।", "success")
+            return redirect(url_for('verify_otp'))
+        except Exception as e:
+            flash("ইমেইল পাঠাতে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।", "error")
+            return redirect(url_for('forgot_password'))
+    return render_template('forgot.html')
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
-    if request.method == 'POST':
-        user_otp = request.form.get('otp')
-        new_password = request.form.get('new_password')
-        if user_otp == session.get('otp'):
-            email = session.get('reset_email')
-            hashed_pw = generate_password_hash(new_password)
-            db.collection('users').document(email).update({'password': hashed_pw})
-            flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এবার লগইন করুন।", "success")
-            return redirect(url_for('login'))
-        else:
-            flash("OTP ভুল হয়েছে!", "error")
-            return redirect(url_for('verify_otp'))
-    return render_template('verify.html')
+    if request.method == 'POST':
+        user_otp = request.form.get('otp')
+        new_password = request.form.get('new_password')
+        if user_otp == session.get('otp'):
+            email = session.get('reset_email')
+            hashed_pw = generate_password_hash(new_password)
+            db.collection('users').document(email).update({'password': hashed_pw})
+            flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এবার লগইন করুন।", "success")
+            return redirect(url_for('login'))
+        else:
+            flash("OTP ভুল হয়েছে!", "error")
+            return redirect(url_for('verify_otp'))
+    return render_template('verify.html')
+
+# --- Upgrade Page Route (Placeholder Link) ---
+@app.route('/upgrade')
+def upgrade():
+    if 'user' not in session: return redirect(url_for('login'))
+    if os.path.exists('templates/upgrade.html'):
+        return render_template('upgrade.html')
+    return """
+    <div style="font-family:sans-serif; text-align:center; padding:60px 20px;">
+        <h2>⭐ Upgrade to AI Notes Plus</h2>
+        <p style="color:#555;">Upgrade page will be added here soon.</p>
+        <a href="/" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#0D8ABC; color:#fff; text-decoration:none; border-radius:8px;">← Back to Chat</a>
+    </div>
+    """
+
+# --- Rename Chat Session Route (Three-dot Rename) ---
+@app.route('/rename_session', methods=['POST'])
+def rename_session():
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    user_email = session['user']
+    data = request.json or {}
+    sess_id = data.get('session_id')
+    new_title = (data.get('new_title') or "").strip()
+    if not sess_id or not new_title:
+        return jsonify({"error": "Invalid title"}), 400
+    try:
+        db.collection('users').document(user_email).collection('sessions').document(sess_id).update({'title': new_title})
+        return jsonify({"status": "success", "new_title": new_title})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- চ্যাট এবং হোমপেজ ---
 @app.route('/')
 def home():
-    if 'user' not in session: return redirect(url_for('login'))
-    user_email = session['user']
-    session_id = request.args.get('session_id')
-    
-    sessions_ref = db.collection('users').document(user_email).collection('sessions').order_by('created_at', direction=firestore.Query.DESCENDING).stream()
-    sidebar_sessions = [{'id': s.id, **s.to_dict()} for s in sessions_ref]
-        
-    history = []
-    if session_id:
-        msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
-        for m in msgs: 
-            data = m.to_dict()
-            data['id'] = m.id 
-            history.append(data)
-            
-    return render_template('index.html', history=history, sidebar_sessions=sidebar_sessions, current_session=session_id, user_email=user_email)
+    if 'user' not in session: return redirect(url_for('login'))
+    user_email = session['user']
+    session_id = request.args.get('session_id')
+    
+    # Get user's remaining daily tokens (2000/day, stored in Firestore)
+    remaining_tokens = get_user_daily_tokens(user_email)
+    
+    sessions_ref = db.collection('users').document(user_email).collection('sessions').order_by('created_at', direction=firestore.Query.DESCENDING).stream()
+    sidebar_sessions = [{'id': s.id, **s.to_dict()} for s in sessions_ref]
+        
+    history = []
+    if session_id:
+        msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp').stream()
+        for m in msgs: 
+            data = m.to_dict()
+            data['id'] = m.id 
+            history.append(data)
+            
+    return render_template(
+        'index.html',
+        history=history,
+        sidebar_sessions=sidebar_sessions,
+        current_session=session_id,
+        user_email=user_email,
+        remaining_tokens=remaining_tokens
+    )
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
-    user_email = session['user']
-    prompt = request.form.get('prompt') or ""
-    session_id = request.form.get('session_id')
-    file = request.files.get('file')
-    
-    is_new_session = False
-    if not session_id or session_id == "None":
-        session_id = str(uuid.uuid4())
-        is_new_session = True
-    
-    img_url = None
-    base64_image = None
-    
-    if file:
-        os.makedirs('static/uploads', exist_ok=True)
-        filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
-        filepath = os.path.join('static/uploads', filename)
-        file.save(filepath)
-        
-        if filename.lower().endswith('.pdf'):
-            try:
-                reader = PyPDF2.PdfReader(filepath)
-                pdf_text = ""
-                for page in reader.pages:
-                    pdf_text += page.extract_text() or ""
-                prompt = f"{prompt}\n\n[PDF Content]:\n{pdf_text[:4000]}"
-            except Exception:
-                pass
-        else:
-            img_url = '/' + filepath
-            base64_image = encode_image(filepath)
-        
-        if not prompt:
-            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    user_email = session['user']
 
-    try:
-        chat_history = []
-        if not is_new_session and needs_previous_context(prompt, has_new_image=(base64_image is not None)):
-            chat_history = get_smart_chat_history(user_email, session_id)
+    # Check Daily 2000 Token Limit in Firestore
+    current_tokens = get_user_daily_tokens(user_email)
+    if current_tokens <= 0:
+        return jsonify({
+            "error": "⚠️ Your daily limit of 2000 tokens is exhausted! Your tokens will automatically reset tomorrow, or click 'Upgrade to Plus' for more tokens.",
+            "remaining_tokens": 0,
+            "token_exhausted": True
+        })
 
-        ai_response, extracted_ocr_text = get_ai_response(prompt, base64_image=base64_image, chat_history=chat_history)
-        
-        session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
-        if not session_ref.get().exists:
-            clean_title = re.sub(r'\[.*?\]\s*', '', prompt).strip()
-            title = (clean_title[:25] + "...") if clean_title else "Image Notes..."
-            session_ref.set({'title': title, 'created_at': firestore.SERVER_TIMESTAMP})
-        
-        chat_data = {
-            'user_msg': prompt,
-            'ai_msg': ai_response,
-            'timestamp': firestore.SERVER_TIMESTAMP
-        }
-        if img_url:
-            chat_data['img_url'] = img_url
-        if base64_image:
-            chat_data['img_b64'] = base64_image
-        if extracted_ocr_text:
-            chat_data['ocr_text'] = extracted_ocr_text
-            
-        update_time, doc_ref = session_ref.collection('messages').add(chat_data)
-        
-        return jsonify({"response": ai_response, "session_id": session_id, "img_url": img_url, "msg_id": doc_ref.id})
-    except Exception as e:
-        return jsonify({"error": str(e)})
+    prompt = request.form.get('prompt') or ""
+    session_id = request.form.get('session_id')
+    file = request.files.get('file')
+    
+    is_new_session = False
+    if not session_id or session_id == "None":
+        session_id = str(uuid.uuid4())
+        is_new_session = True
+    
+    img_url = None
+    base64_image = None
+    
+    if file:
+        os.makedirs('static/uploads', exist_ok=True)
+        filename = str(uuid.uuid4()) + "_" + file.filename.replace(" ", "_")
+        filepath = os.path.join('static/uploads', filename)
+        file.save(filepath)
+        
+        if filename.lower().endswith('.pdf'):
+            try:
+                reader = PyPDF2.PdfReader(filepath)
+                pdf_text = ""
+                for page in reader.pages:
+                    pdf_text += page.extract_text() or ""
+                prompt = f"{prompt}\n\n[PDF Content]:\n{pdf_text[:4000]}"
+            except Exception:
+                pass
+        else:
+            img_url = '/' + filepath
+            base64_image = encode_image(filepath)
+        
+        if not prompt:
+            prompt = "এই ছবিতে যা লেখা বা প্রশ্ন আছে তার বিস্তারিত নোটস এবং উত্তর বাংলায় তৈরি করে দাও।"
+
+    try:
+        chat_history = []
+        if not is_new_session and needs_previous_context(prompt, has_new_image=(base64_image is not None)):
+            chat_history = get_smart_chat_history(user_email, session_id)
+
+        ai_response, extracted_ocr_text, used_tokens = get_ai_response(prompt, base64_image=base64_image, chat_history=chat_history)
+        
+        # Deduct tokens from user's daily 2000 balance
+        remaining_tokens = deduct_user_tokens(user_email, used_tokens)
+
+        session_ref = db.collection('users').document(user_email).collection('sessions').document(session_id)
+        if not session_ref.get().exists:
+            formatted_title = build_formatted_session_title(prompt)
+            session_ref.set({'title': formatted_title, 'created_at': firestore.SERVER_TIMESTAMP})
+        
+        chat_data = {
+            'user_msg': prompt,
+            'ai_msg': ai_response,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        }
+        if img_url:
+            chat_data['img_url'] = img_url
+        if base64_image:
+            chat_data['img_b64'] = base64_image
+        if extracted_ocr_text:
+            chat_data['ocr_text'] = extracted_ocr_text
+            
+        update_time, doc_ref = session_ref.collection('messages').add(chat_data)
+        
+        return jsonify({
+            "response": ai_response,
+            "session_id": session_id,
+            "img_url": img_url,
+            "msg_id": doc_ref.id,
+            "remaining_tokens": remaining_tokens
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 # --- চ্যাট এডিট রুট ---
 @app.route('/edit_chat', methods=['POST'])
 def edit_chat():
-    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
-    user_email = session['user']
-    prompt = request.form.get('prompt')
-    session_id = request.form.get('session_id')
-    msg_id = request.form.get('msg_id')
-    
-    try:
-        base64_image = None
-        doc_ref = None
-        
-        if session_id and session_id != "None" and msg_id and not str(msg_id).startswith('temp-'):
-            doc_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id)
-            doc_snap = doc_ref.get()
-            if doc_snap.exists:
-                doc_data = doc_snap.to_dict()
-                base64_image = doc_data.get('img_b64')
-                if not base64_image and doc_data.get('img_url'):
-                    potential_path = doc_data.get('img_url').lstrip('/')
-                    if os.path.exists(potential_path):
-                        base64_image = encode_image(potential_path)
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    user_email = session['user']
 
-        if not base64_image and session_id and session_id != "None":
-            recent_msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5).stream()
-            for m in recent_msgs:
-                m_data = m.to_dict()
-                if m_data.get('img_b64'):
-                    base64_image = m_data.get('img_b64')
-                    break
-                elif m_data.get('img_url'):
-                    potential_path = m_data.get('img_url').lstrip('/')
-                    if os.path.exists(potential_path):
-                        base64_image = encode_image(potential_path)
-                        break
+    # Check Daily 2000 Token Limit in Firestore
+    current_tokens = get_user_daily_tokens(user_email)
+    if current_tokens <= 0:
+        return jsonify({
+            "error": "⚠️ Your daily limit of 2000 tokens is exhausted! Your tokens will automatically reset tomorrow, or click 'Upgrade to Plus' for more tokens.",
+            "remaining_tokens": 0,
+            "token_exhausted": True
+        })
 
-        chat_history = []
-        if needs_previous_context(prompt, has_new_image=(base64_image is not None)):
-            chat_history = get_smart_chat_history(user_email, session_id, exclude_msg_id=msg_id)
+    prompt = request.form.get('prompt')
+    session_id = request.form.get('session_id')
+    msg_id = request.form.get('msg_id')
+    
+    try:
+        base64_image = None
+        doc_ref = None
+        
+        if session_id and session_id != "None" and msg_id and not str(msg_id).startswith('temp-'):
+            doc_ref = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').document(msg_id)
+            doc_snap = doc_ref.get()
+            if doc_snap.exists:
+                doc_data = doc_snap.to_dict()
+                base64_image = doc_data.get('img_b64')
+                if not base64_image and doc_data.get('img_url'):
+                    potential_path = doc_data.get('img_url').lstrip('/')
+                    if os.path.exists(potential_path):
+                        base64_image = encode_image(potential_path)
 
-        ai_response, extracted_ocr_text = get_ai_response(prompt, base64_image=base64_image, chat_history=chat_history)
-        
-        if doc_ref and doc_ref.get().exists:
-            update_payload = {
-                'user_msg': prompt,
-                'ai_msg': ai_response
-            }
-            if extracted_ocr_text:
-                update_payload['ocr_text'] = extracted_ocr_text
-            doc_ref.update(update_payload)
-        elif session_id and session_id != "None":
-            db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').add({
-                'user_msg': prompt,
-                'ai_msg': ai_response,
-                'timestamp': firestore.SERVER_TIMESTAMP
-            })
-            
-        return jsonify({"response": ai_response})
-    except Exception as e:
-        return jsonify({"error": str(e)})
+        if not base64_image and session_id and session_id != "None":
+            recent_msgs = db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5).stream()
+            for m in recent_msgs:
+                m_data = m.to_dict()
+                if m_data.get('img_b64'):
+                    base64_image = m_data.get('img_b64')
+                    break
+                elif m_data.get('img_url'):
+                    potential_path = m_data.get('img_url').lstrip('/')
+                    if os.path.exists(potential_path):
+                        base64_image = encode_image(potential_path)
+                        break
+
+        chat_history = []
+        if needs_previous_context(prompt, has_new_image=(base64_image is not None)):
+            chat_history = get_smart_chat_history(user_email, session_id, exclude_msg_id=msg_id)
+
+        ai_response, extracted_ocr_text, used_tokens = get_ai_response(prompt, base64_image=base64_image, chat_history=chat_history)
+        
+        remaining_tokens = deduct_user_tokens(user_email, used_tokens)
+
+        if doc_ref and doc_ref.get().exists:
+            update_payload = {
+                'user_msg': prompt,
+                'ai_msg': ai_response
+            }
+            if extracted_ocr_text:
+                update_payload['ocr_text'] = extracted_ocr_text
+            doc_ref.update(update_payload)
+        elif session_id and session_id != "None":
+            db.collection('users').document(user_email).collection('sessions').document(session_id).collection('messages').add({
+                'user_msg': prompt,
+                'ai_msg': ai_response,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            })
+            
+        return jsonify({"response": ai_response, "remaining_tokens": remaining_tokens})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)
